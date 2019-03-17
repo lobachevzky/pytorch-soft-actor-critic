@@ -10,8 +10,13 @@ from utils import hard_update, soft_update
 
 
 class SAC(object):
-    def __init__(self, num_inputs, action_space, args):
+    def __init__(self, num_inputs, action_space, args, algo='sac',
+                 alpha2=None):
 
+        self.alpha2 = alpha2
+        self.algo = algo
+        if algo == 'pmac':
+            assert alpha2 is not None
         self.num_inputs = num_inputs
         self.action_space = action_space.shape[0]
         self.gamma = args.gamma
@@ -65,7 +70,7 @@ class SAC(object):
                 action = torch.tanh(action)
             else:
                 pass
-        #action = torch.tanh(action)
+        # action = torch.tanh(action)
         action = action.detach().cpu().numpy()
         return action[0]
 
@@ -144,20 +149,30 @@ class SAC(object):
             value_loss = F.mse_loss(expected_value, next_value.detach())
         else:
             pass
-        """
-        Reparameterization trick is used to get a low variance estimator
-        f(εt;st) = action sampled from the policy
-        εt is an input noise vector, sampled from some fixed distribution
-        Jπ = 𝔼st∼D,εt∼N[α * logπ(f(εt;st)|st) − Q(st,f(εt;st))]
-        ∇Jπ = ∇log π + ([∇at (α * logπ(at|st)) − ∇at Q(st,at)])∇f(εt;st)
-        """
-        policy_loss = ((self.alpha * log_prob) - expected_new_q_value).mean()
+        if self.algo == 'sac':
+            """
+            Reparameterization trick is used to get a low variance estimator
+            f(εt;st) = action sampled from the policy
+            εt is an input noise vector, sampled from some fixed distribution
+            Jπ = 𝔼st∼D,εt∼N[α * logπ(f(εt;st)|st) − Q(st,f(εt;st))]
+            ∇Jπ = ∇log π + ([∇at (α * logπ(at|st)) − ∇at Q(st,at)])∇f(εt;st)
+            """
+            policy_loss = (
+                (self.alpha * log_prob) - expected_new_q_value).mean()
 
-        # Regularization Loss
-        mean_loss = 0.001 * mean.pow(2).mean()
-        std_loss = 0.001 * log_std.pow(2).mean()
+            # Regularization Loss
+            mean_loss = 0.001 * mean.pow(2).mean()
+            std_loss = 0.001 * log_std.pow(2).mean()
 
-        policy_loss += mean_loss + std_loss
+            policy_loss += mean_loss + std_loss
+        elif self.algo == 'pmac':
+
+            policy_loss = (torch.exp(expected_new_q_value - self.alpha *
+                                     log_prob.detach() - expected_value) -
+                           np.exp(self.alpha + self.alpha2)) * log_prob
+            policy_loss = policy_loss.mean()
+        else:
+            raise RuntimeError
 
         self.critic_optim.zero_grad()
         q1_value_loss.backward()

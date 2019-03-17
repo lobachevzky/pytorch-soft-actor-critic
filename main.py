@@ -105,6 +105,8 @@ parser.add_argument(
     metavar='N',
     help='size of replay buffer (default: 10000000)')
 parser.add_argument('--log-dir')
+parser.add_argument('--algo', default='sac')
+parser.add_argument('--alpha2', type=float)
 args = parser.parse_args()
 
 # Environment
@@ -114,7 +116,8 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 # Agent
-agent = SAC(env.observation_space.shape[0], env.action_space, args)
+agent = SAC(env.observation_space.shape[0], env.action_space, args, args.algo,
+            args.alpha2)
 
 writer = SummaryWriter(args.log_dir)
 
