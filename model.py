@@ -1,13 +1,12 @@
-import sys
-import os
 import torch
+from torch.distributions import Normal
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions import Normal
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
 epsilon = 1e-6
+
 
 # Initialize Policy weights
 def weights_init_(m):
@@ -88,13 +87,15 @@ class GaussianPolicy(nn.Module):
         mean, log_std = self.forward(state)
         std = log_std.exp()
         normal = Normal(mean, std)
-        x_t = normal.rsample()  # for reparameterization trick (mean + std * N(0,1))
+        x_t = normal.rsample(
+        )  # for reparameterization trick (mean + std * N(0,1))
         action = torch.tanh(x_t)
         log_prob = normal.log_prob(x_t)
         # Enforcing Action Bound
         log_prob -= torch.log(1 - action.pow(2) + epsilon)
         log_prob = log_prob.sum(1, keepdim=True)
         return action, log_prob, x_t, mean, log_std
+
 
 class DeterministicPolicy(nn.Module):
     def __init__(self, num_inputs, num_actions, hidden_dim):
@@ -113,11 +114,10 @@ class DeterministicPolicy(nn.Module):
         mean = torch.tanh(self.mean(x))
         return mean
 
-
     def sample(self, state):
         mean = self.forward(state)
         noise = self.noise.normal_(0., std=0.1)
         noise = noise.clamp(-0.25, 0.25)
         action = mean + noise
-        return action, torch.tensor(0.), torch.tensor(0.), mean, torch.tensor(0.)
-    
+        return action, torch.tensor(0.), torch.tensor(0.), mean, torch.tensor(
+            0.)

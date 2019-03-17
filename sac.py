@@ -1,11 +1,12 @@
-import sys
 import os
+
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
-from utils import soft_update, hard_update
-from model import GaussianPolicy, QNetwork, ValueNetwork, DeterministicPolicy
+
+from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork
+from utils import hard_update, soft_update
 
 
 class SAC(object):
@@ -20,21 +21,23 @@ class SAC(object):
         self.target_update_interval = args.target_update_interval
         self.automatic_entropy_tuning = args.automatic_entropy_tuning
 
-        self.critic = QNetwork(self.num_inputs, self.action_space, args.hidden_size)
+        self.critic = QNetwork(self.num_inputs, self.action_space,
+                               args.hidden_size)
         self.critic_optim = Adam(self.critic.parameters(), lr=args.lr)
 
         if self.policy_type == "Gaussian":
             self.alpha = args.alpha
             # Target Entropy = −dim(A) (e.g. , -6 for HalfCheetah-v2) as given in the paper
             if self.automatic_entropy_tuning == True:
-                self.target_entropy = -torch.prod(torch.Tensor(action_space.shape)).item()
+                self.target_entropy = -torch.prod(
+                    torch.Tensor(action_space.shape)).item()
                 self.log_alpha = torch.zeros(1, requires_grad=True)
                 self.alpha_optim = Adam([self.log_alpha], lr=args.lr)
             else:
                 pass
 
-
-            self.policy = GaussianPolicy(self.num_inputs, self.action_space, args.hidden_size)
+            self.policy = GaussianPolicy(self.num_inputs, self.action_space,
+                                         args.hidden_size)
             self.policy_optim = Adam(self.policy.parameters(), lr=args.lr)
 
             self.value = ValueNetwork(self.num_inputs, args.hidden_size)
@@ -42,13 +45,13 @@ class SAC(object):
             self.value_optim = Adam(self.value.parameters(), lr=args.lr)
             hard_update(self.value_target, self.value)
         else:
-            self.policy = DeterministicPolicy(self.num_inputs, self.action_space, args.hidden_size)
+            self.policy = DeterministicPolicy(
+                self.num_inputs, self.action_space, args.hidden_size)
             self.policy_optim = Adam(self.policy.parameters(), lr=args.lr)
 
-            self.critic_target = QNetwork(self.num_inputs, self.action_space, args.hidden_size)
+            self.critic_target = QNetwork(self.num_inputs, self.action_space,
+                                          args.hidden_size)
             hard_update(self.critic_target, self.critic)
-
-
 
     def select_action(self, state, eval=False):
         state = torch.FloatTensor(state).unsqueeze(0)
@@ -66,45 +69,45 @@ class SAC(object):
         action = action.detach().cpu().numpy()
         return action[0]
 
-
-
-    def update_parameters(self, state_batch, action_batch, reward_batch, next_state_batch, mask_batch, updates):
+    def update_parameters(self, state_batch, action_batch, reward_batch,
+                          next_state_batch, mask_batch, updates):
         state_batch = torch.FloatTensor(state_batch)
         next_state_batch = torch.FloatTensor(next_state_batch)
         action_batch = torch.FloatTensor(action_batch)
         reward_batch = torch.FloatTensor(reward_batch).unsqueeze(1)
         mask_batch = torch.FloatTensor(np.float32(mask_batch)).unsqueeze(1)
-
         """
         Use two Q-functions to mitigate positive bias in the policy improvement step that is known
         to degrade performance of value based methods. Two Q-functions also significantly speed
         up training, especially on harder task.
         """
-        expected_q1_value, expected_q2_value = self.critic(state_batch, action_batch)
-        new_action, log_prob, _, mean, log_std = self.policy.sample(state_batch)
+        expected_q1_value, expected_q2_value = self.critic(
+            state_batch, action_batch)
+        new_action, log_prob, _, mean, log_std = self.policy.sample(
+            state_batch)
 
         if self.policy_type == "Gaussian":
             if self.automatic_entropy_tuning:
                 """
                 Alpha Loss
                 """
-                alpha_loss = -(self.log_alpha * (log_prob + self.target_entropy).detach()).mean()
+                alpha_loss = -(self.log_alpha * (
+                    log_prob + self.target_entropy).detach()).mean()
                 self.alpha_optim.zero_grad()
                 alpha_loss.backward()
                 self.alpha_optim.step()
                 self.alpha = self.log_alpha.exp()
-                alpha_logs = self.alpha.clone() # For TensorboardX logs
+                alpha_logs = self.alpha.clone()  # For TensorboardX logs
             else:
                 alpha_loss = torch.tensor(0.)
-                alpha_logs = self.alpha # For TensorboardX logs
-
-
+                alpha_logs = self.alpha  # For TensorboardX logs
             """
             Including a separate function approximator for the soft value can stabilize training.
             """
             expected_value = self.value(state_batch)
             target_value = self.value_target(next_state_batch)
-            next_q_value = reward_batch + mask_batch * self.gamma * (target_value).detach()
+            next_q_value = reward_batch + mask_batch * self.gamma * (
+                target_value).detach()
         else:
             """
             There is no need in principle to include a separate function approximator for the state value.
@@ -112,12 +115,13 @@ class SAC(object):
             """
             alpha_loss = torch.tensor(0.)
             alpha_logs = self.alpha  # For TensorboardX logs
-            next_state_action, _, _, _, _, = self.policy.sample(next_state_batch)
-            target_critic_1, target_critic_2 = self.critic_target(next_state_batch, next_state_action)
+            next_state_action, _, _, _, _, = self.policy.sample(
+                next_state_batch)
+            target_critic_1, target_critic_2 = self.critic_target(
+                next_state_batch, next_state_action)
             target_critic = torch.min(target_critic_1, target_critic_2)
-            next_q_value = reward_batch + mask_batch * self.gamma * (target_critic).detach()
-        
-        
+            next_q_value = reward_batch + mask_batch * self.gamma * (
+                target_critic).detach()
         """
         Soft Q-function parameters can be trained to minimize the soft Bellman residual
         JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
@@ -140,7 +144,6 @@ class SAC(object):
             value_loss = F.mse_loss(expected_value, next_value.detach())
         else:
             pass
-
         """
         Reparameterization trick is used to get a low variance estimator
         f(εt;st) = action sampled from the policy
@@ -174,8 +177,6 @@ class SAC(object):
         self.policy_optim.zero_grad()
         policy_loss.backward()
         self.policy_optim.step()
-        
-        
         """
         We update the target weights to match the current value function weights periodically
         Update target parameter after every n(args.target_update_interval) updates
@@ -185,10 +186,16 @@ class SAC(object):
 
         elif updates % self.target_update_interval == 0 and self.policy_type == "Gaussian":
             soft_update(self.value_target, self.value, self.tau)
-        return value_loss.item(), q1_value_loss.item(), q2_value_loss.item(), policy_loss.item(), alpha_loss.item(), alpha_logs
+        return value_loss.item(), q1_value_loss.item(), q2_value_loss.item(
+        ), policy_loss.item(), alpha_loss.item(), alpha_logs
 
     # Save model parameters
-    def save_model(self, env_name, suffix="", actor_path=None, critic_path=None, value_path=None):
+    def save_model(self,
+                   env_name,
+                   suffix="",
+                   actor_path=None,
+                   critic_path=None,
+                   value_path=None):
         if not os.path.exists('models/'):
             os.makedirs('models/')
 
@@ -198,14 +205,16 @@ class SAC(object):
             critic_path = "models/sac_critic_{}_{}".format(env_name, suffix)
         if value_path is None:
             value_path = "models/sac_value_{}_{}".format(env_name, suffix)
-        print('Saving models to {}, {} and {}'.format(actor_path, critic_path, value_path))
+        print('Saving models to {}, {} and {}'.format(actor_path, critic_path,
+                                                      value_path))
         torch.save(self.value.state_dict(), value_path)
         torch.save(self.policy.state_dict(), actor_path)
         torch.save(self.critic.state_dict(), critic_path)
-    
+
     # Load model parameters
     def load_model(self, actor_path, critic_path, value_path):
-        print('Loading models from {}, {} and {}'.format(actor_path, critic_path, value_path))
+        print('Loading models from {}, {} and {}'.format(
+            actor_path, critic_path, value_path))
         if actor_path is not None:
             self.policy.load_state_dict(torch.load(actor_path))
         if critic_path is not None:
