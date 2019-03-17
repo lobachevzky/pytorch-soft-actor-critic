@@ -2,3 +2,6 @@
 .idea
 __pycache__
 runs
+.runsrc
+runs.db
+.runs
