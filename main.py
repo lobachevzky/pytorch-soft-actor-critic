@@ -12,7 +12,7 @@ from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
 
-parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
+parser = argparse.ArgumentParser()
 parser.add_argument(
     '--env-name',
     default="HalfCheetah-v2",
@@ -73,9 +73,9 @@ parser.add_argument(
 parser.add_argument(
     '--num_steps',
     type=int,
-    default=1000001,
+    default=1e10,
     metavar='N',
-    help='maximum number of steps (default: 1000000)')
+    help='maximum number of steps (default: 1e10)')
 parser.add_argument(
     '--hidden_size',
     type=int,
