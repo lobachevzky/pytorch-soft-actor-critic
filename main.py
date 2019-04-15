@@ -156,12 +156,12 @@ for i_episode in itertools.count():
                     state_batch, action_batch, reward_batch, next_state_batch,
                     mask_batch, updates)
 
-                writer.add_scalar('loss/value', value_loss, updates)
-                writer.add_scalar('loss/critic_1', critic_1_loss, updates)
-                writer.add_scalar('loss/critic_2', critic_2_loss, updates)
-                writer.add_scalar('loss/policy', policy_loss, updates)
-                writer.add_scalar('loss/entropy_loss', ent_loss, updates)
-                writer.add_scalar('entropy_temperature/alpha', alpha, updates)
+                writer.add_scalar('value loss', value_loss, updates)
+                writer.add_scalar('critic1 loss', critic_1_loss, updates)
+                writer.add_scalar('critic2 loss', critic_2_loss, updates)
+                writer.add_scalar('policy loss', policy_loss, updates)
+                writer.add_scalar('entropy loss', ent_loss, updates)
+                writer.add_scalar('alpha', alpha, updates)
                 updates += 1
 
         state = next_state
@@ -174,7 +174,7 @@ for i_episode in itertools.count():
     if total_numsteps > args.num_steps:
         break
 
-    writer.add_scalar('reward/train', episode_reward, i_episode)
+    writer.add_scalar('train reward', episode_reward, i_episode)
     rewards.append(episode_reward)
     print("Episode: {}, total numsteps: {}, reward: {}, average reward: {}".
           format(i_episode, total_numsteps, np.round(rewards[-1], 2),
@@ -193,7 +193,7 @@ for i_episode in itertools.count():
             if done:
                 break
 
-        writer.add_scalar('reward/test', episode_reward, i_episode)
+        writer.add_scalar('test reward', episode_reward, i_episode)
 
         test_rewards.append(episode_reward)
         print("----------------------------------------")
