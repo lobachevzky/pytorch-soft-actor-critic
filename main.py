@@ -106,7 +106,7 @@ parser.add_argument(
     default=1000000,
     metavar='N',
     help='size of replay buffer')
-parser.add_argument('--log-dir')
+parser.add_argument('--logdir')
 parser.add_argument('--algo', default='sac')
 parser.add_argument('--alpha2', type=float)
 args = parser.parse_args()
@@ -121,7 +121,7 @@ np.random.seed(args.seed)
 agent = SAC(env.observation_space.shape[0], env.action_space, args, args.algo,
             args.alpha2)
 
-writer = SummaryWriter(args.log_dir)
+writer = SummaryWriter(args.logdir)
 
 # Memory
 memory = ReplayMemory(args.replay_size)
