@@ -12,7 +12,7 @@ from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument(
     '--env-name',
     default="HalfCheetah-v2",
@@ -31,26 +31,26 @@ parser.add_argument(
     type=float,
     default=0.99,
     metavar='G',
-    help='discount factor for reward (default: 0.99)')
+    help='discount factor for reward')
 parser.add_argument(
     '--tau',
     type=float,
     default=0.005,
     metavar='G',
-    help='target smoothing coefficient(τ) (default: 0.005)')
+    help='target smoothing coefficient(τ)')
 parser.add_argument(
     '--lr',
     type=float,
     default=0.0003,
     metavar='G',
-    help='learning rate (default: 0.0003)')
+    help='learning rate')
 parser.add_argument(
     '--alpha',
     type=float,
     default=0.1,
     metavar='G',
     help=
-    'Temperature parameter α determines the relative importance of the entropy term against the reward (default: 0.1)'
+    'Temperature parameter α determines the relative importance of the entropy term against the reward'
 )
 parser.add_argument(
     '--automatic_entropy_tuning',
@@ -63,49 +63,49 @@ parser.add_argument(
     type=int,
     default=456,
     metavar='N',
-    help='random seed (default: 456)')
+    help='random seed')
 parser.add_argument(
     '--batch_size',
     type=int,
     default=256,
     metavar='N',
-    help='batch size (default: 256)')
+    help='batch size')
 parser.add_argument(
     '--num_steps',
     type=int,
     default=1e10,
     metavar='N',
-    help='maximum number of steps (default: 1e10)')
+    help='maximum number of steps')
 parser.add_argument(
     '--hidden_size',
     type=int,
     default=256,
     metavar='N',
-    help='hidden size (default: 256)')
+    help='hidden size')
 parser.add_argument(
     '--updates_per_step',
     type=int,
     default=1,
     metavar='N',
-    help='model updates per simulator step (default: 1)')
+    help='model updates per simulator step')
 parser.add_argument(
     '--start_steps',
     type=int,
     default=10000,
     metavar='N',
-    help='Steps sampling random actions (default: 10000)')
+    help='Steps sampling random actions')
 parser.add_argument(
     '--target_update_interval',
     type=int,
     default=1,
     metavar='N',
-    help='Value target update per no. of updates per step (default: 1)')
+    help='Value target update per no. of updates per step')
 parser.add_argument(
     '--replay_size',
     type=int,
     default=1000000,
     metavar='N',
-    help='size of replay buffer (default: 10000000)')
+    help='size of replay buffer')
 parser.add_argument('--log-dir')
 parser.add_argument('--algo', default='sac')
 parser.add_argument('--alpha2', type=float)

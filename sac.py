@@ -171,6 +171,7 @@ class SAC(object):
                                      log_prob.detach() - expected_value.detach()) -
                            np.exp(self.alpha + self.alpha2)) * log_prob
             policy_loss = policy_loss.mean()
+            print('policy loss:', policy_loss.detach().numpy().item())
         else:
             raise RuntimeError
 
