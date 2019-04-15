@@ -5,14 +5,15 @@ import itertools
 
 import gym
 import numpy as np
-from tensorboardX import SummaryWriter
 import torch
+from tensorboardX import SummaryWriter
 
 from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
 
-parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser = argparse.ArgumentParser(
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument(
     '--env-name',
     default="HalfCheetah-v2",
@@ -39,11 +40,7 @@ parser.add_argument(
     metavar='G',
     help='target smoothing coefficient(τ)')
 parser.add_argument(
-    '--lr',
-    type=float,
-    default=0.0003,
-    metavar='G',
-    help='learning rate')
+    '--lr', type=float, default=0.0003, metavar='G', help='learning rate')
 parser.add_argument(
     '--alpha',
     type=float,
@@ -59,17 +56,9 @@ parser.add_argument(
     metavar='G',
     help='Temperature parameter α automaically adjusted.')
 parser.add_argument(
-    '--seed',
-    type=int,
-    default=456,
-    metavar='N',
-    help='random seed')
+    '--seed', type=int, default=456, metavar='N', help='random seed')
 parser.add_argument(
-    '--batch_size',
-    type=int,
-    default=256,
-    metavar='N',
-    help='batch size')
+    '--batch_size', type=int, default=256, metavar='N', help='batch size')
 parser.add_argument(
     '--num_steps',
     type=int,
@@ -77,11 +66,7 @@ parser.add_argument(
     metavar='N',
     help='maximum number of steps')
 parser.add_argument(
-    '--hidden_size',
-    type=int,
-    default=256,
-    metavar='N',
-    help='hidden size')
+    '--hidden_size', type=int, default=256, metavar='N', help='hidden size')
 parser.add_argument(
     '--updates_per_step',
     type=int,
@@ -145,6 +130,7 @@ for i_episode in itertools.count():
         mask = not done  # 1 for not done and 0 for done
         memory.push(state, action, reward, next_state,
                     mask)  # Append transition to memory
+
         if len(memory) > args.batch_size:
             for i in range(args.updates_per_step
                            ):  # Number of updates per step in environment
@@ -181,7 +167,7 @@ for i_episode in itertools.count():
                  np.round(np.mean(rewards[-100:]), 2)))
 
     if i_episode % 10 == 0 and args.eval == True:
-        state = torch.Tensor([env.reset()])
+        state = env.reset()
         episode_reward = 0
         while True:
             action = agent.select_action(state, eval=True)
