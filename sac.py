@@ -167,8 +167,8 @@ class SAC(object):
             policy_loss += mean_loss + std_loss
         elif self.algo == 'pmac':
 
-            policy_loss = (torch.exp(expected_new_q_value - self.alpha *
-                                     log_prob.detach() - expected_value) -
+            policy_loss = (torch.exp(expected_new_q_value.detach() - self.alpha *
+                                     log_prob.detach() - expected_value.detach()) -
                            np.exp(self.alpha + self.alpha2)) * log_prob
             policy_loss = policy_loss.mean()
         else:
