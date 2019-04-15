@@ -161,7 +161,7 @@ for i_episode in itertools.count():
                 writer.add_scalar('critic2 loss', critic_2_loss, updates)
                 writer.add_scalar('policy loss', policy_loss, updates)
                 writer.add_scalar('entropy loss', ent_loss, updates)
-                writer.add_scalar('alpha', alpha, updates)
+                # writer.add_scalar('alpha', alpha, updates)
                 updates += 1
 
         state = next_state
