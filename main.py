@@ -40,7 +40,11 @@ parser.add_argument(
     metavar='G',
     help='target smoothing coefficient(τ)')
 parser.add_argument(
-    '--lr', type=float, default=0.0003, metavar='G', help='learning rate')
+    '--critic-lr', type=float, default=0.0003,help='critic learning rate')
+parser.add_argument(
+    '--actor-lr', type=float, default=0.0003, help='actor learning rate')
+parser.add_argument(
+    '--alpha-lr', type=float, default=0.0003, help='alpha learning rate')
 parser.add_argument(
     '--alpha',
     type=float,

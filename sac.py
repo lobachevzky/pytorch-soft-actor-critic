@@ -29,7 +29,7 @@ class SAC(object):
 
         self.critic = QNetwork(self.num_inputs, self.action_space,
                                args.hidden_size)
-        self.critic_optim = Adam(self.critic.parameters(), lr=args.lr)
+        self.critic_optim = Adam(self.critic.parameters(), lr=args.critic_lr)
 
         if self.policy_type == "Gaussian":
             self.alpha = args.alpha
@@ -38,17 +38,17 @@ class SAC(object):
                 self.target_entropy = -torch.prod(
                     torch.Tensor(action_space.shape)).item()
                 self.log_alpha = torch.zeros(1, requires_grad=True)
-                self.alpha_optim = Adam([self.log_alpha], lr=args.lr)
+                self.alpha_optim = Adam([self.log_alpha], lr=args.alpha_lr)
             else:
                 pass
 
             self.policy = GaussianPolicy(self.num_inputs, self.action_space,
                                          args.hidden_size)
-            self.policy_optim = Adam(self.policy.parameters(), lr=args.lr)
+            self.policy_optim = Adam(self.policy.parameters(), lr=args.actor_lr)
 
             self.value = ValueNetwork(self.num_inputs, args.hidden_size)
             self.value_target = ValueNetwork(self.num_inputs, args.hidden_size)
-            self.value_optim = Adam(self.value.parameters(), lr=args.lr)
+            self.value_optim = Adam(self.value.parameters(), lr=args.critic_lr)
             hard_update(self.value_target, self.value)
         else:
             self.policy = DeterministicPolicy(
@@ -167,12 +167,10 @@ class SAC(object):
 
             policy_loss += mean_loss + std_loss
         elif self.algo == 'pmac':
-
             policy_loss = (torch.exp(expected_new_q_value.detach(
             ) - self.alpha * log_prob.detach() - expected_value.detach()) -
                            np.exp(self.alpha + self.alpha2)) * log_prob
             policy_loss = policy_loss.mean()
-            print('policy loss:', policy_loss.detach().numpy().item())
         else:
             raise RuntimeError
 
