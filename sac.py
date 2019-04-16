@@ -1,3 +1,4 @@
+import copy
 import os
 
 import numpy as np
@@ -45,6 +46,9 @@ class SAC(object):
 
             self.policy = GaussianPolicy(self.num_inputs, self.action_space,
                                          args.hidden_size)
+            self.reference_policy = None
+            if algo == 'pmac':
+                self.reference_policy = copy.deepcopy(self.policy)
             self.policy_optim = Adam(self.policy.parameters(), lr=args.actor_lr)
 
             self.value = ValueNetwork(self.num_inputs, args.hidden_size)
@@ -92,6 +96,10 @@ class SAC(object):
             state_batch, action_batch)
         new_action, log_prob, _, mean, log_std = self.policy.sample(
             state_batch)
+        if self.algo == 'pmac':
+            _, reference_log_prob, _, _, _ = self.reference_policy.sample(
+                state_batch)
+
 
         if self.policy_type == "Gaussian":
             if self.automatic_entropy_tuning:
@@ -170,9 +178,11 @@ class SAC(object):
 
             policy_loss += mean_loss + std_loss
         elif self.algo == 'pmac':
-            policy_loss = (torch.exp(expected_new_q_value.detach(
-            ) - self.alpha * log_prob.detach() - expected_value.detach()) -
-                           np.exp(self.alpha + self.alpha2)) * log_prob
+            coefficient = torch.exp((expected_new_q_value -
+                                    self.alpha * reference_log_prob -
+                                    expected_value) /
+                                    (self.alpha + self.alpha2))
+            policy_loss = coefficient.detach() * log_prob
             policy_loss = policy_loss.mean()
         else:
             raise RuntimeError

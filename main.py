@@ -13,6 +13,8 @@ from replay_memory import ReplayMemory
 from sac import SAC
 from utils import space_to_size
 
+from util import hard_update
+
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument(
@@ -158,6 +160,8 @@ for i_episode in itertools.count():
                 writer.add_scalar('entropy loss', ent_loss, updates)
                 # writer.add_scalar('alpha', alpha, updates)
                 updates += 1
+            if agent.algo == 'pmac':
+                hard_update(agent.reference_policy, agent.policy)
 
         state = next_state
         total_numsteps += 1
