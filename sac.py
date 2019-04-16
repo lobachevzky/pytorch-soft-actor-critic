@@ -22,6 +22,7 @@ class SAC(object):
         self.action_space = space_to_size(action_space)
         self.gamma = args.gamma
         self.tau = args.tau
+        self.clip = args.clip
 
         self.policy_type = args.policy
         self.target_update_interval = args.target_update_interval
@@ -101,6 +102,8 @@ class SAC(object):
                     log_prob + self.target_entropy).detach()).mean()
                 self.alpha_optim.zero_grad()
                 alpha_loss.backward()
+                if self.clip:
+                    torch.nn.utils.clip_grad_norm([self.log_alpha], self.clip)
                 self.alpha_optim.step()
                 self.alpha = self.log_alpha.exp()
                 alpha_logs = self.alpha.clone()  # For TensorboardX logs
@@ -176,20 +179,28 @@ class SAC(object):
 
         self.critic_optim.zero_grad()
         q1_value_loss.backward()
+        if self.clip:
+            torch.nn.utils.clip_grad_norm(self.critic.parameters(), self.clip)
         self.critic_optim.step()
 
         self.critic_optim.zero_grad()
         q2_value_loss.backward()
+        if self.clip:
+            torch.nn.utils.clip_grad_norm(self.critic.parameters(), self.clip)
         self.critic_optim.step()
 
         if self.policy_type == "Gaussian":
             self.value_optim.zero_grad()
             value_loss.backward()
+            if self.clip:
+                torch.nn.utils.clip_grad_norm(self.value.parameters(), self.clip)
             self.value_optim.step()
         else:
             value_loss = torch.tensor(0.)
 
         self.policy_optim.zero_grad()
+        if self.clip:
+            torch.nn.utils.clip_grad_norm(self.policy.parameters(), self.clip)
         policy_loss.backward()
         self.policy_optim.step()
         """

@@ -11,6 +11,7 @@ from tensorboardX import SummaryWriter
 from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
+from utils import space_to_size
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -40,7 +41,11 @@ parser.add_argument(
     metavar='G',
     help='target smoothing coefficient(τ)')
 parser.add_argument(
-    '--critic-lr', type=float, default=0.0003,help='critic learning rate')
+    '--clip',
+    type=float,
+    help='gradient clipping')
+parser.add_argument(
+    '--critic-lr', type=float, default=0.0003, help='critic learning rate')
 parser.add_argument(
     '--actor-lr', type=float, default=0.0003, help='actor learning rate')
 parser.add_argument(
@@ -107,7 +112,7 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 # Agent
-agent = SAC(env.observation_space.shape[0], env.action_space, args, args.algo,
+agent = SAC(space_to_size(env.observation_space), env.action_space, args, args.algo,
             args.alpha2)
 
 writer = SummaryWriter(args.logdir)
