@@ -177,9 +177,7 @@ class SAC(object):
         q1_value_loss = F.mse_loss(expected_q1_value, next_q_value)
         q2_value_loss = F.mse_loss(expected_q2_value, next_q_value)
         q1_new, q2_new = self.critic(state_batch, new_action)
-        expected_new_q_value = q1_new
-        expected_new_q_value[q2_new.abs() < q1_new.abs()] = q2_new[
-            q2_new.abs() < q1_new.abs()]
+        expected_new_q_value = torch.min(q1_new, q2_new)
 
         if self.policy_type == "Gaussian":
             """
@@ -260,13 +258,17 @@ class SAC(object):
         self.writer.add_scalar('critic1 loss', q1_value_loss.item(), updates)
         self.writer.add_scalar('critic2 loss', q2_value_loss.item(), updates)
         self.writer.add_scalar('policy loss', policy_loss.item(), updates)
-        self.writer.add_scalar('Q', expected_new_q_value.mean().item(), updates)
-        self.writer.add_scalar('reference log prob', reference_log_prob.mean().item(), updates)
-        self.writer.add_scalar('policy loss coefficient', coefficient, updates)
+        self.writer.add_scalar('Q',
+                               expected_new_q_value.mean().item(), updates)
+        self.writer.add_scalar('reference log prob',
+                               reference_log_prob.mean().item(), updates)
+        self.writer.add_scalar('policy loss coefficient',
+                               coefficient.mean().item(), updates)
         self.writer.add_scalar('V', expected_value.mean().item(), updates)
         self.writer.add_scalar('Q1', expected_q1_value.mean().item(), updates)
         self.writer.add_scalar('Q2', expected_q2_value.mean().item(), updates)
-        self.writer.add_scalar('value', expected_q2_value.mean().item(), updates)
+        self.writer.add_scalar('value',
+                               expected_q2_value.mean().item(), updates)
         self.writer.add_scalar('std dev', log_std.exp().mean().item(), updates)
 
     # Save model parameters
