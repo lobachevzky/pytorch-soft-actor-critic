@@ -179,7 +179,7 @@ class SAC(object):
         q1_new, q2_new = self.critic(state_batch, new_action)
         expected_new_q_value = torch.min(q1_new, q2_new)
 
-        if self.policy_type == "Gaussian":
+        if self.algo == 'sac':
             """
             Including a separate function approximator for the soft value can stabilize training and is convenient to 
             train simultaneously with the other networks
@@ -190,9 +190,6 @@ class SAC(object):
             """
             next_value = expected_new_q_value - (self.tau_ * log_prob)
             value_loss = F.mse_loss(expected_value, next_value.detach())
-        else:
-            pass
-        if self.algo == 'sac':
             """
             Reparameterization trick is used to get a low variance estimator
             f(εt;st) = action sampled from the policy
@@ -209,6 +206,9 @@ class SAC(object):
 
             policy_loss += mean_loss + std_loss
         elif self.algo == 'pmac':
+            next_value = expected_new_q_value - (self.tau_ * ref_log_prob)
+            value_loss = F.mse_loss(expected_value, next_value.detach())
+
             ref_q = torch.min(*self.critic(state_batch, ref_actions))
             coefficient = torch.exp(
                 (ref_q - self.tau * ref_log_prob -
