@@ -49,7 +49,8 @@ class SAC(object):
             self.reference_policy = None
             if algo == 'pmac':
                 self.reference_policy = copy.deepcopy(self.policy)
-            self.policy_optim = Adam(self.policy.parameters(), lr=args.actor_lr)
+            self.policy_optim = Adam(
+                self.policy.parameters(), lr=args.actor_lr)
 
             self.value = ValueNetwork(self.num_inputs, args.hidden_size)
             self.value_target = ValueNetwork(self.num_inputs, args.hidden_size)
@@ -99,7 +100,6 @@ class SAC(object):
         if self.algo == 'pmac':
             _, reference_log_prob, _, _, _ = self.reference_policy.sample(
                 state_batch)
-
 
         if self.policy_type == "Gaussian":
             if self.automatic_entropy_tuning:
@@ -178,10 +178,9 @@ class SAC(object):
 
             policy_loss += mean_loss + std_loss
         elif self.algo == 'pmac':
-            coefficient = torch.exp((expected_new_q_value -
-                                    self.alpha * reference_log_prob -
-                                    expected_value) /
-                                    (self.alpha + self.alpha2))
+            coefficient = torch.exp(
+                (expected_new_q_value - self.alpha * reference_log_prob -
+                 expected_value) / (self.alpha + self.alpha2))
             policy_loss = coefficient.detach() * log_prob
             policy_loss = policy_loss.mean()
         else:
@@ -203,7 +202,8 @@ class SAC(object):
             self.value_optim.zero_grad()
             value_loss.backward()
             if self.clip:
-                torch.nn.utils.clip_grad_norm(self.value.parameters(), self.clip)
+                torch.nn.utils.clip_grad_norm(self.value.parameters(),
+                                              self.clip)
             self.value_optim.step()
         else:
             value_loss = torch.tensor(0.)
@@ -223,7 +223,8 @@ class SAC(object):
         elif updates % self.target_update_interval == 0 and self.policy_type == "Gaussian":
             soft_update(self.value_target, self.value, self.tau)
         return value_loss.item(), q1_value_loss.item(), q2_value_loss.item(
-        ), policy_loss.item(), alpha_loss.item(), alpha_logs
+        ), policy_loss.item(), alpha_loss.item(
+        ), alpha_logs, expected_q1_value.mean().item(), log_std.mean().item()
 
     # Save model parameters
     def save_model(self,

@@ -149,7 +149,8 @@ for i_episode in itertools.count():
                 state_batch, action_batch, reward_batch, next_state_batch, mask_batch = memory.sample(
                     args.batch_size)
                 # Update parameters of all the networks
-                value_loss, critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(
+                value_loss, critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha, q, \
+                log_std = agent.update_parameters(
                     state_batch, action_batch, reward_batch, next_state_batch,
                     mask_batch, updates)
 
@@ -157,7 +158,9 @@ for i_episode in itertools.count():
                 writer.add_scalar('critic1 loss', critic_1_loss, updates)
                 writer.add_scalar('critic2 loss', critic_2_loss, updates)
                 writer.add_scalar('policy loss', policy_loss, updates)
-                writer.add_scalar('entropy loss', ent_loss, updates)
+                writer.add_scalar('q', q, updates)
+                writer.add_scalar('log_std', log_std, updates)
+                # writer.add_scalar('entropy loss', ent_loss, updates)
                 # writer.add_scalar('alpha', alpha, updates)
                 updates += 1
             if agent.algo == 'pmac':
