@@ -4,6 +4,7 @@ import argparse
 import itertools
 
 import gym
+import ipdb
 import numpy as np
 import torch
 from tensorboardX import SummaryWriter
@@ -66,8 +67,7 @@ parser.add_argument(
     '--seed', type=int, default=0, metavar='N', help='random seed')
 parser.add_argument(
     '--batch_size', type=int, default=256, metavar='N', help='batch size')
-parser.add_argument(
-    '--no-cuda', dest='cuda', action='store_false')
+parser.add_argument('--no-cuda', dest='cuda', action='store_false')
 parser.add_argument(
     '--num_steps',
     type=int,
@@ -107,16 +107,23 @@ parser.add_argument('--tau_', type=float)
 args = parser.parse_args()
 
 # Environment
-env = NormalizedActions(gym.make(args.env_name))
-env.seed(args.seed)
+# env = NormalizedActions(gym.make(args.env_name))
+env = gym.make(args.env_name)
+env.seed(1)
+action = env.action_space.sample()
+print(action)
+ipdb.set_trace()
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 writer = SummaryWriter(args.logdir)
 
 # Agent
-agent = SAC(space_to_size(env.observation_space), env.action_space, args, writer=writer)
-
+agent = SAC(
+    space_to_size(env.observation_space),
+    env.action_space,
+    args,
+    writer=writer)
 
 # Memory
 memory = ReplayMemory(args.replay_size)
@@ -150,9 +157,9 @@ for i_episode in itertools.count():
                 state_batch, action_batch, reward_batch, next_state_batch, mask_batch = memory.sample(
                     args.batch_size)
                 # Update parameters of all the networks
-                agent.update_parameters(
-                    state_batch, action_batch, reward_batch, next_state_batch,
-                    mask_batch, updates)
+                agent.update_parameters(state_batch, action_batch,
+                                        reward_batch, next_state_batch,
+                                        mask_batch, updates)
 
                 updates += 1
 
