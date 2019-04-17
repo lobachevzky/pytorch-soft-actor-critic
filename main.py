@@ -11,9 +11,8 @@ from tensorboardX import SummaryWriter
 from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
-from utils import space_to_size
-
 from util import hard_update
+from utils import space_to_size
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -42,10 +41,7 @@ parser.add_argument(
     default=0.005,
     metavar='G',
     help='target smoothing coefficient(τ)')
-parser.add_argument(
-    '--clip',
-    type=float,
-    help='gradient clipping')
+parser.add_argument('--clip', type=float, help='gradient clipping')
 parser.add_argument(
     '--critic-lr', type=float, default=0.0003, help='critic learning rate')
 parser.add_argument(
@@ -104,7 +100,7 @@ parser.add_argument(
     help='size of replay buffer')
 parser.add_argument('--logdir')
 parser.add_argument('--algo', default='sac')
-parser.add_argument('--alpha2', type=float)
+parser.add_argument('--tau', type=float)
 args = parser.parse_args()
 
 # Environment
@@ -114,8 +110,9 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 # Agent
-agent = SAC(space_to_size(env.observation_space), env.action_space, args, args.algo,
-            args.alpha2)
+agent = SAC(
+    space_to_size(env.observation_space), env.action_space, args, args.algo,
+    args.tau)
 
 writer = SummaryWriter(args.logdir)
 

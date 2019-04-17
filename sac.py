@@ -13,12 +13,12 @@ from utils import space_to_size
 
 class SAC(object):
     def __init__(self, num_inputs, action_space, args, algo='sac',
-                 alpha2=None):
+                 tau=None):
 
-        self.alpha2 = alpha2
+        self.tau = tau
         self.algo = algo
         if algo == 'pmac':
-            assert alpha2 is not None
+            assert tau is not None
         self.num_inputs = num_inputs
         self.action_space = space_to_size(action_space)
         self.gamma = args.gamma
@@ -180,7 +180,7 @@ class SAC(object):
         elif self.algo == 'pmac':
             coefficient = torch.exp(
                 (expected_new_q_value - self.alpha * reference_log_prob -
-                 expected_value) / (self.alpha + self.alpha2))
+                 expected_value) / (self.alpha + self.tau))
             policy_loss = coefficient.detach() * log_prob
             policy_loss = policy_loss.mean()
         else:
