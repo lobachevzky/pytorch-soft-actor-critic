@@ -215,7 +215,8 @@ class SAC(object):
             # policy_loss = coefficient.detach() * log_prob
             # policy_loss = log_prob - (ref_q + self.tau * ref_log_prob -
             # expected_value) / (self.tau + self.tau_)
-            policy_loss = (self.tau_ * log_prob - expected_new_q_value).mean()
+            policy_loss = (
+                (self.alpha * log_prob) - expected_new_q_value).mean()
 
             policy_loss = policy_loss.mean()
         else:
