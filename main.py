@@ -110,6 +110,7 @@ args = parser.parse_args()
 # env = NormalizedActions(gym.make(args.env_name))
 env = gym.make(args.env_name)
 env.action_space.np_random.seed(args.seed)
+env.unwrapped.np_random.seed(args.seed)
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
@@ -141,6 +142,7 @@ for i_episode in itertools.count():
         else:
             action = agent.select_action(state)  # Sample action from policy
         next_state, reward, done, _ = env.step(action)  # Step
+
         mask = not done  # 1 for not done and 0 for done
         memory.push(state, action, reward, next_state,
                     mask)  # Append transition to memory
