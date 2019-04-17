@@ -6,8 +6,8 @@ import itertools
 import gym
 import ipdb
 import numpy as np
-import torch
 from tensorboardX import SummaryWriter
+import torch
 
 from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
@@ -109,10 +109,7 @@ args = parser.parse_args()
 # Environment
 # env = NormalizedActions(gym.make(args.env_name))
 env = gym.make(args.env_name)
-env.seed(1)
-action = env.action_space.sample()
-print(action)
-ipdb.set_trace()
+env.action_space.np_random.seed(args.seed)
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
