@@ -12,17 +12,18 @@ from utils import space_to_size
 
 
 class SAC(object):
-    def __init__(self, num_inputs, action_space, args, algo='sac',
-                 tau=None):
+    def __init__(self, num_inputs, action_space, args):
 
-        self.tau = tau
-        self.algo = algo
-        if algo == 'pmac':
-            assert tau is not None
+        self.tau = args.tau
+        self.tau_ = args.tau_
+        self.algo = args.algo
+        if args.algo == 'pmac':
+            assert args.tau is not None
+            assert args.tau_ is not None
         self.num_inputs = num_inputs
         self.action_space = space_to_size(action_space)
         self.gamma = args.gamma
-        self.tau = args.tau
+        self.smoothing = args.smoothing
         self.clip = args.clip
 
         self.policy_type = args.policy
@@ -47,7 +48,7 @@ class SAC(object):
             self.policy = GaussianPolicy(self.num_inputs, self.action_space,
                                          args.hidden_size)
             self.reference_policy = None
-            if algo == 'pmac':
+            if args.algo == 'pmac':
                 self.reference_policy = copy.deepcopy(self.policy)
             self.policy_optim = Adam(
                 self.policy.parameters(), lr=args.actor_lr)
@@ -179,8 +180,8 @@ class SAC(object):
             policy_loss += mean_loss + std_loss
         elif self.algo == 'pmac':
             coefficient = torch.exp(
-                (expected_new_q_value - self.alpha * reference_log_prob -
-                 expected_value) / (self.alpha + self.tau))
+                (expected_new_q_value - self.tau * reference_log_prob -
+                 expected_value) / (self.tau + self.tau_))
             policy_loss = coefficient.detach() * log_prob
             policy_loss = policy_loss.mean()
         else:
@@ -218,10 +219,10 @@ class SAC(object):
         Update target parameter after every n(args.target_update_interval) updates
         """
         if updates % self.target_update_interval == 0 and self.policy_type == "Deterministic":
-            soft_update(self.critic_target, self.critic, self.tau)
+            soft_update(self.critic_target, self.critic, self.smoothing)
 
         elif updates % self.target_update_interval == 0 and self.policy_type == "Gaussian":
-            soft_update(self.value_target, self.value, self.tau)
+            soft_update(self.value_target, self.value, self.smoothing)
         return value_loss.item(), q1_value_loss.item(), q2_value_loss.item(
         ), policy_loss.item(), alpha_loss.item(
         ), alpha_logs, expected_q1_value.mean().item(), log_std.mean().item()

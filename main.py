@@ -36,7 +36,7 @@ parser.add_argument(
     metavar='G',
     help='discount factor for reward')
 parser.add_argument(
-    '--tau',
+    '--smoothing',
     type=float,
     default=0.005,
     metavar='G',
@@ -101,6 +101,7 @@ parser.add_argument(
 parser.add_argument('--logdir')
 parser.add_argument('--algo', default='sac')
 parser.add_argument('--tau', type=float)
+parser.add_argument('--tau_', type=float)
 args = parser.parse_args()
 
 # Environment
@@ -110,9 +111,8 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 # Agent
-agent = SAC(
-    space_to_size(env.observation_space), env.action_space, args, args.algo,
-    args.tau)
+agent = SAC(space_to_size(env.observation_space), env.action_space, args)
+
 
 writer = SummaryWriter(args.logdir)
 
