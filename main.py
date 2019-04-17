@@ -38,14 +38,14 @@ parser.add_argument(
 parser.add_argument(
     '--smoothing',
     type=float,
-    default=0.005,
+    default=0.01,
     metavar='G',
     help='target smoothing coefficient(τ)')
 parser.add_argument('--clip', type=float, help='gradient clipping')
 parser.add_argument(
-    '--critic-lr', type=float, default=0.0003, help='critic learning rate')
+    '--critic-lr', type=float, default=5e-4, help='critic learning rate')
 parser.add_argument(
-    '--actor-lr', type=float, default=0.0003, help='actor learning rate')
+    '--actor-lr', type=float, default=5e-4, help='actor learning rate')
 parser.add_argument(
     '--alpha-lr', type=float, default=0.0003, help='alpha learning rate')
 parser.add_argument(
@@ -63,7 +63,7 @@ parser.add_argument(
     metavar='G',
     help='Temperature parameter α automaically adjusted.')
 parser.add_argument(
-    '--seed', type=int, default=456, metavar='N', help='random seed')
+    '--seed', type=int, default=0, metavar='N', help='random seed')
 parser.add_argument(
     '--batch_size', type=int, default=256, metavar='N', help='batch size')
 parser.add_argument(
@@ -142,6 +142,8 @@ for i_episode in itertools.count():
                     mask)  # Append transition to memory
 
         if len(memory) > args.batch_size:
+            if agent.algo == 'pmac':
+                hard_update(agent.reference_policy, agent.policy)
             for i in range(args.updates_per_step
                            ):  # Number of updates per step in environment
                 # Sample a batch from memory
@@ -162,8 +164,6 @@ for i_episode in itertools.count():
                 # writer.add_scalar('entropy loss', ent_loss, updates)
                 # writer.add_scalar('alpha', alpha, updates)
                 updates += 1
-            if agent.algo == 'pmac':
-                hard_update(agent.reference_policy, agent.policy)
 
         state = next_state
         total_numsteps += 1
