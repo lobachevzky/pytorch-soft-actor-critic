@@ -29,12 +29,12 @@ def get_freer_gpu():
 class SAC(object):
     def __init__(self, num_inputs, action_space, args):
 
-        self.tau = args.tau
-        self.tau_ = args.tau_
         self.algo = args.algo
         if args.algo == 'pmac':
             assert args.tau is not None
             assert args.tau_ is not None
+        self.tau = args.tau
+        self.tau_ = args.tau_ or args.alpha
         self.num_inputs = num_inputs
         self.action_space = space_to_size(action_space)
         self.gamma = args.gamma
@@ -187,7 +187,7 @@ class SAC(object):
             JV = 𝔼st~D[0.5(V(st) - (𝔼at~π[Qmin(st,at) - α * log π(at|st)]))^2]
             ∇JV = ∇V(st)(V(st) - Q(st,at) + (α * logπ(at|st)))
             """
-            next_value = expected_new_q_value - (self.alpha * log_prob)
+            next_value = expected_new_q_value - (self.tau_ * log_prob)
             value_loss = F.mse_loss(expected_value, next_value.detach())
         else:
             pass
