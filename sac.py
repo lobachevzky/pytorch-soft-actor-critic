@@ -258,13 +258,17 @@ class SAC(object):
         self.writer.add_scalar('critic1 loss', q1_value_loss.item(), updates)
         self.writer.add_scalar('critic2 loss', q2_value_loss.item(), updates)
         self.writer.add_scalar('policy loss', policy_loss.item(), updates)
-        self.writer.add_scalar('Q', expected_new_q_value.mean().item(), updates)
-        self.writer.add_scalar('reference log prob', reference_log_prob.mean().item(), updates)
-        self.writer.add_scalar('policy loss coefficient', coefficient, updates)
+        self.writer.add_scalar('Q',
+                               expected_new_q_value.mean().item(), updates)
+        self.writer.add_scalar('reference log prob',
+                               reference_log_prob.mean().item(), updates)
+        self.writer.add_scalar('policy loss coefficient',
+                               coefficient.mean().item(), updates)
         self.writer.add_scalar('V', expected_value.mean().item(), updates)
         self.writer.add_scalar('Q1', expected_q1_value.mean().item(), updates)
         self.writer.add_scalar('Q2', expected_q2_value.mean().item(), updates)
-        self.writer.add_scalar('value', expected_q2_value.mean().item(), updates)
+        self.writer.add_scalar('value',
+                               expected_q2_value.mean().item(), updates)
         self.writer.add_scalar('std dev', log_std.exp().mean().item(), updates)
 
     # Save model parameters
