@@ -51,7 +51,7 @@ parser.add_argument(
 parser.add_argument(
     '--alpha',
     type=float,
-    default=0.1,
+    default=0.01,
     metavar='G',
     help=
     'Temperature parameter α determines the relative importance of the entropy term against the reward'
@@ -73,11 +73,11 @@ parser.add_argument(
     metavar='N',
     help='maximum number of steps')
 parser.add_argument(
-    '--hidden_size', type=int, default=256, metavar='N', help='hidden size')
+    '--hidden_size', type=int, default=300, metavar='N', help='hidden size')
 parser.add_argument(
     '--updates_per_step',
     type=int,
-    default=1,
+    default=100,
     metavar='N',
     help='model updates per simulator step')
 parser.add_argument(
