@@ -1,6 +1,10 @@
 import copy
+import csv
 import os
+import subprocess
+from io import StringIO
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
@@ -8,11 +12,6 @@ from torch.optim import Adam
 from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork
 from util import hard_update, soft_update
 from utils import space_to_size
-
-import numpy as np
-import csv
-import subprocess
-from io import StringIO
 
 
 def get_freer_gpu():
@@ -210,10 +209,15 @@ class SAC(object):
             value_loss = F.mse_loss(expected_value, next_value.detach())
 
             ref_q = torch.min(*self.critic(state_batch, ref_actions))
-            coefficient = torch.exp(
-                (ref_q - self.tau * ref_log_prob -
-                 expected_value) / (self.tau + self.tau_))
-            policy_loss = coefficient.detach() * log_prob
+            # coefficient = torch.exp(
+            # (ref_q - self.tau * ref_log_prob - expected_value) /
+            # (self.tau + self.tau_))
+            # policy_loss = coefficient.detach() * log_prob
+            # policy_loss = log_prob - (ref_q + self.tau * ref_log_prob -
+            # expected_value) / (self.tau + self.tau_)
+            policy_loss = (
+                (self.alpha * log_prob) - expected_new_q_value).mean()
+
             policy_loss = policy_loss.mean()
         else:
             raise RuntimeError
@@ -259,11 +263,13 @@ class SAC(object):
         self.writer.add_scalar('critic1 loss', q1_value_loss.item(), updates)
         self.writer.add_scalar('critic2 loss', q2_value_loss.item(), updates)
         self.writer.add_scalar('policy loss', policy_loss.item(), updates)
-        self.writer.add_scalar('Q', expected_new_q_value.mean().item(), updates)
+        self.writer.add_scalar('Q',
+                               expected_new_q_value.mean().item(), updates)
         self.writer.add_scalar('V', expected_value.mean().item(), updates)
         self.writer.add_scalar('Q1', expected_q1_value.mean().item(), updates)
         self.writer.add_scalar('Q2', expected_q2_value.mean().item(), updates)
-        self.writer.add_scalar('value', expected_q2_value.mean().item(), updates)
+        self.writer.add_scalar('value',
+                               expected_q2_value.mean().item(), updates)
         self.writer.add_scalar('std dev', log_std.exp().mean().item(), updates)
 
     # Save model parameters
