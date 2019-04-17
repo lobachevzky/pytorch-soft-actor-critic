@@ -1,7 +1,6 @@
 import copy
 import os
 
-import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
@@ -9,6 +8,22 @@ from torch.optim import Adam
 from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork
 from util import hard_update, soft_update
 from utils import space_to_size
+
+import numpy as np
+import csv
+import subprocess
+from io import StringIO
+
+
+def get_freer_gpu():
+    nvidia_smi = subprocess.check_output(
+        'nvidia-smi --format=csv --query-gpu=memory.free'.split(),
+        universal_newlines=True)
+    free_memory = [
+        float(x[0].split()[0])
+        for i, x in enumerate(csv.reader(StringIO(nvidia_smi))) if i > 0
+    ]
+    return np.argmax(free_memory).item()
 
 
 class SAC(object):
@@ -25,6 +40,10 @@ class SAC(object):
         self.gamma = args.gamma
         self.smoothing = args.smoothing
         self.clip = args.clip
+
+        self.device = torch.device('cpu')
+        if args.cuda and torch.cuda.is_available():
+            self.device = torch.device('cuda', index=get_freer_gpu())
 
         self.policy_type = args.policy
         self.target_update_interval = args.target_update_interval
@@ -50,6 +69,7 @@ class SAC(object):
             self.reference_policy = None
             if args.algo == 'pmac':
                 self.reference_policy = copy.deepcopy(self.policy)
+                self.reference_policy.to(self.device)
             self.policy_optim = Adam(
                 self.policy.parameters(), lr=args.actor_lr)
 
@@ -65,9 +85,15 @@ class SAC(object):
             self.critic_target = QNetwork(self.num_inputs, self.action_space,
                                           args.hidden_size)
             hard_update(self.critic_target, self.critic)
+            self.critic_target.to(self.device)
+
+        self.policy.to(self.device)
+        self.critic.to(self.device)
+        self.value.to(self.device)
+        self.value_target.to(self.device)
 
     def select_action(self, state, eval=False):
-        state = torch.FloatTensor(state).unsqueeze(0)
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         if eval == False:
             self.policy.train()
             action, _, _, _, _ = self.policy.sample(state)
@@ -84,11 +110,13 @@ class SAC(object):
 
     def update_parameters(self, state_batch, action_batch, reward_batch,
                           next_state_batch, mask_batch, updates):
-        state_batch = torch.FloatTensor(state_batch)
-        next_state_batch = torch.FloatTensor(next_state_batch)
-        action_batch = torch.FloatTensor(action_batch)
-        reward_batch = torch.FloatTensor(reward_batch).unsqueeze(1)
-        mask_batch = torch.FloatTensor(np.float32(mask_batch)).unsqueeze(1)
+        state_batch = torch.FloatTensor(state_batch).to(self.device)
+        next_state_batch = torch.FloatTensor(next_state_batch).to(self.device)
+        action_batch = torch.FloatTensor(action_batch).to(self.device)
+        reward_batch = torch.FloatTensor(reward_batch).unsqueeze(1).to(
+            self.device)
+        mask_batch = torch.FloatTensor(np.float32(mask_batch)).unsqueeze(1).to(
+            self.device)
         """
         Use two Q-functions to mitigate positive bias in the policy improvement step that is known
         to degrade performance of value based methods. Two Q-functions also significantly speed
@@ -154,7 +182,8 @@ class SAC(object):
             """
             Including a separate function approximator for the soft value can stabilize training and is convenient to 
             train simultaneously with the other networks
-            Update the V towards the min of two Q-functions in order to reduce overestimation bias from function approximation error.
+            Update the V towards the min of two Q-functions in order to reduce overestimation bias from function 
+            approximation error.
             JV = 𝔼st~D[0.5(V(st) - (𝔼at~π[Qmin(st,at) - α * log π(at|st)]))^2]
             ∇JV = ∇V(st)(V(st) - Q(st,at) + (α * logπ(at|st)))
             """

@@ -67,6 +67,8 @@ parser.add_argument(
 parser.add_argument(
     '--batch_size', type=int, default=256, metavar='N', help='batch size')
 parser.add_argument(
+    '--no-cuda', dest='cuda', action='store_false')
+parser.add_argument(
     '--num_steps',
     type=int,
     default=1e10,
