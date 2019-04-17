@@ -176,7 +176,9 @@ class SAC(object):
         q1_value_loss = F.mse_loss(expected_q1_value, next_q_value)
         q2_value_loss = F.mse_loss(expected_q2_value, next_q_value)
         q1_new, q2_new = self.critic(state_batch, new_action)
-        expected_new_q_value = torch.min(q1_new, q2_new)
+        expected_new_q_value = q1_new
+        expected_new_q_value[q2_new.abs() < q1_new.abs()] = q2_new[
+            q2_new.abs() < q1_new.abs()]
 
         if self.policy_type == "Gaussian":
             """
