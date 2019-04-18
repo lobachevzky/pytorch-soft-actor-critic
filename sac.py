@@ -26,8 +26,15 @@ def get_freer_gpu():
 
 
 class SAC(object):
-    def __init__(self, num_inputs, action_space, args, writer):
+    def __init__(self, num_inputs, action_space, args, writer,
+                 policy_mean_reg_weight=1e-3,
+                 policy_std_reg_weight=1e-3,
+                 policy_pre_activation_weight=0.,
+                 ):
 
+        self.policy_pre_activation_weight = policy_pre_activation_weight
+        self.policy_std_reg_weight = policy_std_reg_weight
+        self.policy_mean_reg_weight = policy_mean_reg_weight
         self.writer = writer
         self.algo = args.algo
         if args.algo == 'pmac':
@@ -124,7 +131,7 @@ class SAC(object):
         """
         expected_q1_value, expected_q2_value = self.critic(
             state_batch, action_batch)
-        new_action, log_prob, _, mean, log_std, policy_dist = self.policy.sample(
+        new_action, log_prob, pre_tanh_value, policy_mean, log_std, policy_dist = self.policy.sample(
             state_batch)
         if self.algo == 'pmac':
             ref_actions, ref_log_prob, _, _, _, _ = self.reference_policy.sample(
@@ -200,21 +207,40 @@ class SAC(object):
                 (self.alpha * log_prob) - expected_new_q_value).mean()
 
             # Regularization Loss
-            mean_loss = 0.001 * mean.pow(2).mean()
+            mean_loss = 0.001 * policy_mean.pow(2).mean()
             std_loss = 0.001 * log_std.pow(2).mean()
 
             policy_loss += mean_loss + std_loss
         elif self.algo == 'pmac':
-            next_value = expected_new_q_value - (self.tau_ * ref_log_prob)
-            value_loss = F.mse_loss(expected_value, next_value.detach())
-
             ref_q = torch.min(*self.critic(state_batch, ref_actions))
-            value = self.value(state_batch).detach()
-            log_prob_ref_actions = policy_dist.log_prob(ref_actions)
-            policy_loss = -torch.exp(
-                (ref_q - self.tau_ * ref_log_prob - value) /
-                (self.tau + self.tau_)) * log_prob_ref_actions
-            policy_loss = policy_loss.mean()
+            value_loss = F.mse_loss(expected_value, ref_q.detach())
+            #
+            # value = self.value(state_batch).detach()
+            # log_prob_ref_actions = policy_dist.log_prob(ref_actions)
+            # policy_loss = -torch.exp(
+            #     (ref_q - self.tau_ * ref_log_prob - value) /
+            #     (self.tau + self.tau_)) * log_prob_ref_actions
+            # policy_loss = policy_loss.mean()
+            q_new_actions = ref_q
+            log_pi_ref = ref_log_prob
+            v_pred = expected_value
+            self.tau1 = self.tau
+            self.tau2 = self.tau_
+            log_pi = policy_dist.log_prob(ref_actions)
+            policy_log_std = log_std
+
+            target_policy = torch.exp(
+                (q_new_actions - self.tau2 * log_pi_ref - v_pred) / (self.tau1 + self.tau2)).detach()
+            target_policy = torch.clamp(target_policy, max=0.9)
+            policy_loss = (target_policy * (target_policy - log_pi)).mean()
+            mean_reg_loss = self.policy_mean_reg_weight * (policy_mean ** 2).mean()
+            std_reg_loss = self.policy_std_reg_weight * (policy_log_std ** 2).mean()
+            # pre_tanh_value = policy_outputs[-1]
+            pre_activation_reg_loss = self.policy_pre_activation_weight * (
+                (pre_tanh_value ** 2).sum(dim=1).mean()
+            )
+            policy_reg_loss = mean_reg_loss + std_reg_loss + pre_activation_reg_loss
+            policy_loss = policy_loss + policy_reg_loss
         else:
             raise RuntimeError
 

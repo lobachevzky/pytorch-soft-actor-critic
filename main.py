@@ -80,7 +80,7 @@ parser.add_argument(
 parser.add_argument(
     '--updates_per_step',
     type=int,
-    default=100,
+    default=1,
     metavar='N',
     help='model updates per simulator step')
 parser.add_argument(
