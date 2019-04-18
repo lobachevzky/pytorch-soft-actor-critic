@@ -209,7 +209,7 @@ class SAC(object):
             value_loss = F.mse_loss(expected_value, next_value.detach())
 
             ref_q = torch.min(*self.critic(state_batch, ref_actions))
-            coefficient = torch.exp(
+            coefficient = -torch.exp(
                 (ref_q - self.tau_ * ref_log_prob - expected_value.detach()) /
                 (self.tau + self.tau_))
             policy_loss = coefficient * log_prob
