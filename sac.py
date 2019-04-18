@@ -210,8 +210,8 @@ class SAC(object):
 
             ref_q = torch.min(*self.critic(state_batch, ref_actions))
             coefficient = torch.exp(
-                (expected_new_q_value - self.tau_ * ref_log_prob -
-                 expected_value.detach()) / (self.tau + self.tau_))
+                (ref_q - self.tau_ * ref_log_prob - expected_value.detach()) /
+                (self.tau + self.tau_))
             policy_loss = coefficient * log_prob
             policy_loss = policy_loss.mean()
         else:
