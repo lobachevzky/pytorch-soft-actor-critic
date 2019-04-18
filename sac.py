@@ -124,7 +124,7 @@ class SAC(object):
         """
         expected_q1_value, expected_q2_value = self.critic(
             state_batch, action_batch)
-        new_action, log_prob, _, mean, log_std, _ = self.policy.sample(
+        new_action, log_prob, _, mean, log_std, policy_dist = self.policy.sample(
             state_batch)
         if self.algo == 'pmac':
             ref_actions, ref_log_prob, _, _, _, _ = self.reference_policy.sample(
@@ -210,9 +210,10 @@ class SAC(object):
 
             ref_q = torch.min(*self.critic(state_batch, ref_actions))
             value = self.value(state_batch).detach()
+            log_prob_ref_actions = policy_dist.log_prob(ref_actions)
             policy_loss = -torch.exp(
                 (ref_q - self.tau_ * ref_log_prob - value) /
-                (self.tau + self.tau_)) * log_prob
+                (self.tau + self.tau_)) * log_prob_ref_actions
             policy_loss = policy_loss.mean()
         else:
             raise RuntimeError
