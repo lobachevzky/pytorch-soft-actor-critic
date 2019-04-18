@@ -2,6 +2,7 @@
 
 import argparse
 import itertools
+import random
 
 import gym
 import ipdb
@@ -113,6 +114,7 @@ env.action_space.np_random.seed(args.seed)
 env.unwrapped.np_random.seed(args.seed)
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
+random.seed(args.seed)
 
 writer = SummaryWriter(args.logdir)
 
