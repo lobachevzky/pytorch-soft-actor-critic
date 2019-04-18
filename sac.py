@@ -94,12 +94,12 @@ class SAC(object):
 
     def select_action(self, state, eval=False):
         state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-        if eval == False:
+        if not eval:
             self.policy.train()
-            action, _, _, _, _ = self.policy.sample(state)
+            action, _, _, _, _, _ = self.policy.sample(state)
         else:
             self.policy.eval()
-            _, _, _, action, _ = self.policy.sample(state)
+            _, _, _, action, _, _ = self.policy.sample(state)
             if self.policy_type == "Gaussian":
                 action = torch.tanh(action)
             else:
@@ -124,10 +124,10 @@ class SAC(object):
         """
         expected_q1_value, expected_q2_value = self.critic(
             state_batch, action_batch)
-        new_action, log_prob, _, mean, log_std = self.policy.sample(
+        new_action, log_prob, _, mean, log_std, _ = self.policy.sample(
             state_batch)
         if self.algo == 'pmac':
-            ref_actions, ref_log_prob, _, _, _ = self.reference_policy.sample(
+            ref_actions, ref_log_prob, _, _, _, _ = self.reference_policy.sample(
                 state_batch)
 
         if self.policy_type == "Gaussian":
@@ -161,7 +161,7 @@ class SAC(object):
             """
             alpha_loss = torch.tensor(0.)
             alpha_logs = self.alpha  # For TensorboardX logs
-            next_state_action, _, _, _, _, = self.policy.sample(
+            next_state_action, _, _, _, _, _ = self.policy.sample(
                 next_state_batch)
             target_critic_1, target_critic_2 = self.critic_target(
                 next_state_batch, next_state_action)
@@ -209,10 +209,10 @@ class SAC(object):
             value_loss = F.mse_loss(expected_value, next_value.detach())
 
             ref_q = torch.min(*self.critic(state_batch, ref_actions))
-            coefficient = torch.exp(
-                (expected_new_q_value - self.tau_ * ref_log_prob -
-                 expected_value.detach()) / (self.tau + self.tau_))
-            policy_loss = coefficient * log_prob
+            value = self.value(state_batch).detach()
+            policy_loss = -torch.exp(
+                (ref_q - self.tau_ * ref_log_prob - value) /
+                (self.tau + self.tau_)) * log_prob
             policy_loss = policy_loss.mean()
         else:
             raise RuntimeError
