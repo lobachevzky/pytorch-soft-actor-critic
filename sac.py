@@ -209,15 +209,15 @@ class SAC(object):
             value_loss = F.mse_loss(expected_value, next_value.detach())
 
             ref_q = torch.min(*self.critic(state_batch, ref_actions))
-            # coefficient = torch.exp(
-            # (ref_q - self.tau * ref_log_prob - expected_value) /
-            # (self.tau + self.tau_))
-            # policy_loss = coefficient.detach() * log_prob
+            coefficient = torch.exp(
+                (expected_new_q_value - self.tau_ * ref_log_prob -
+                 expected_value.detach()) / (self.tau + self.tau_))
+            policy_loss = coefficient * log_prob
             # policy_loss = log_prob - (ref_q + self.tau * ref_log_prob - expected_value) / (self.tau + self.tau_)
-            policy_loss = (
-                log_prob -
-                (expected_new_q_value + self.tau * ref_log_prob -
-                 expected_value.detach()) / (self.tau + self.tau_)).mean()
+            # policy_loss = (
+                # log_prob -
+                # (expected_new_q_value + self.tau * ref_log_prob -
+                 # expected_value.detach()) / (self.tau + self.tau_)).mean()
 
             policy_loss = policy_loss.mean()
         else:
