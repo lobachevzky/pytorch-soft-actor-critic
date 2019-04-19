@@ -6,8 +6,8 @@ import random
 
 import gym
 import numpy as np
-import torch
 from tensorboardX import SummaryWriter
+import torch
 
 from replay_memory import ReplayMemory
 from sac import SAC
