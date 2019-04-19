@@ -1,8 +1,8 @@
 import copy
 import csv
-from io import StringIO
 import os
 import subprocess
+from io import StringIO
 
 import numpy as np
 import torch
@@ -134,6 +134,7 @@ class SAC(object):
         to degrade performance of value based methods. Two Q-functions also significantly speed
         up training, especially on harder task.
         """
+        q1_value, q2_value = self.critic(state_batch, action_batch)
         if self.algo == 'pmac':
             *ref_values, _ = self.reference_policy.sample(state_batch)
             new_action, ref_log_prob, ref_act_tanh, _, _ = [
@@ -149,7 +150,6 @@ class SAC(object):
         target_value = self.value_target(next_state_batch)
         next_q_value = reward_batch + mask_batch * self.gamma * (
             target_value).detach()
-        q1_value, q2_value = self.critic(state_batch, action_batch)
 
         if False:  # self.policy_type == "Gaussian":
             if self.automatic_entropy_tuning:
