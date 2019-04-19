@@ -67,16 +67,16 @@ parser.add_argument(
 parser.add_argument(
     '--seed', type=int, default=0, metavar='N', help='random seed')
 parser.add_argument(
-    '--batch_size', type=int, default=256, metavar='N', help='batch size')
+    '--batch-size', type=int, default=256, metavar='N', help='batch size')
 parser.add_argument('--no-cuda', dest='cuda', action='store_false')
 parser.add_argument(
-    '--num_steps',
+    '--num-steps',
     type=int,
     default=1e10,
     metavar='N',
     help='maximum number of steps')
 parser.add_argument(
-    '--hidden_size', type=int, default=300, metavar='N', help='hidden size')
+    '--hidden-size', type=int, default=300, metavar='N', help='hidden size')
 parser.add_argument(
     '--updates-per-step',
     type=int,
