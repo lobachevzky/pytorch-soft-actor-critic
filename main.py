@@ -107,6 +107,7 @@ parser.add_argument('--algo', default='pmac')
 parser.add_argument('--tau1', default=.1, type=float)
 parser.add_argument('--tau2', default=.01, type=float)
 args = parser.parse_args()
+print('Using algorithm:', args.algo)
 
 # Environment
 # env = NormalizedActions(gym.make(args.env_name))
