@@ -1,8 +1,8 @@
 import copy
 import csv
-from io import StringIO
 import os
 import subprocess
+from io import StringIO
 
 import numpy as np
 import torch
@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 
 from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork
-from util import hard_update, soft_update,space_to_size
+from util import hard_update, soft_update, space_to_size
 
 
 def get_freer_gpu():
@@ -130,7 +130,7 @@ class SAC(object):
         mask_batch = torch.FloatTensor(np.float32(mask_batch)).unsqueeze(1).to(
             self.device)
         """
-            Use two Q-functions to mitigate positive bias in the policy improvement step that is known
+        Use two Q-functions to mitigate positive bias in the policy improvement step that is known
         to degrade performance of value based methods. Two Q-functions also significantly speed
         up training, especially on harder task.
         """
