@@ -10,8 +10,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 
 from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork
-from util import hard_update, soft_update
-from utils import space_to_size
+from util import hard_update, soft_update,space_to_size
 
 
 def get_freer_gpu():

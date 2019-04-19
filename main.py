@@ -11,8 +11,7 @@ import torch
 
 from replay_memory import ReplayMemory
 from sac import SAC
-from util import hard_update
-from utils import space_to_size
+from util import hard_update, space_to_size
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
