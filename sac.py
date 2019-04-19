@@ -143,13 +143,18 @@ class SAC(object):
         with open('networks.pkl', 'rb') as f:
             networks = pickle.load(f)
 
+        with open('optim.pkl', 'rb') as f:
+            optims = pickle.load(f)
+            
+
+
         critic_mapping = {
-            self.critic.linear1: ('qf1', 'fc0'),
-            self.critic.linear2: ('qf1', 'fc1'),
-            self.critic.linear3: ('qf1', 'last_fc'),
-            self.critic.linear4: ('qf2', 'fc0'),
-            self.critic.linear5: ('qf2', 'fc1'),
-            self.critic.linear6: ('qf2', 'last_fc'),
+            self.critic.qf1.linear1: ('qf1', 'fc0'),
+            self.critic.qf1.linear2: ('qf1', 'fc1'),
+            self.critic.qf1.linear3: ('qf1', 'last_fc'),
+            self.critic.qf2.linear1: ('qf2', 'fc0'),
+            self.critic.qf2.linear2: ('qf2', 'fc1'),
+            self.critic.qf2.linear3: ('qf2', 'last_fc'),
         }
         policy_mapping = {
             self.policy: 'policy',
