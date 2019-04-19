@@ -84,6 +84,12 @@ parser.add_argument(
     metavar='N',
     help='model updates per simulator step')
 parser.add_argument(
+    '--episodes-per-eval',
+    type=int,
+    default=10,
+    metavar='N',
+    help=' ')
+parser.add_argument(
     '--start-steps',
     type=int,
     default=10000,
@@ -184,7 +190,7 @@ for i_episode in itertools.count():
           format(i_episode, total_numsteps, np.round(rewards[-1], 2),
                  np.round(np.mean(rewards[-100:]), 2)))
 
-    if i_episode % 10 == 0 and args.eval == True:
+    if i_episode % args.episodes_per_eval == 0 and args.eval == True:
         state = env.reset()
         episode_reward = 0
         while True:
