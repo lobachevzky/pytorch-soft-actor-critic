@@ -104,8 +104,8 @@ parser.add_argument(
     help='size of replay buffer')
 parser.add_argument('--logdir')
 parser.add_argument('--algo', default='sac')
-parser.add_argument('--tau', type=float)
-parser.add_argument('--tau_', type=float)
+parser.add_argument('--tau1', type=float)
+parser.add_argument('--tau2', type=float)
 args = parser.parse_args()
 
 # Environment
