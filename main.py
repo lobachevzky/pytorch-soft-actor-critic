@@ -5,16 +5,13 @@ import itertools
 import random
 
 import gym
-import ipdb
 import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 
-from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
-from util import hard_update
-from utils import space_to_size
+from util import hard_update, space_to_size
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -84,11 +81,9 @@ parser.add_argument(
     metavar='N',
     help='model updates per simulator step')
 parser.add_argument(
-    '--episodes-per-eval',
-    type=int,
-    default=10,
-    metavar='N',
-    help=' ')
+    '--episodes-per-eval', type=int, default=10, metavar='N', help=' ')
+parser.add_argument(
+    '--updates-per-write', type=int, default=100, metavar='N', help=' ')
 parser.add_argument(
     '--start-steps',
     type=int,
@@ -109,8 +104,8 @@ parser.add_argument(
     help='size of replay buffer')
 parser.add_argument('--logdir')
 parser.add_argument('--algo', default='sac')
-parser.add_argument('--tau', type=float)
-parser.add_argument('--tau_', type=float)
+parser.add_argument('--tau1', default=.1, type=float)
+parser.add_argument('--tau2', default=.01, type=float)
 args = parser.parse_args()
 
 # Environment

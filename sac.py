@@ -1,8 +1,8 @@
 import copy
 import csv
+from io import StringIO
 import os
 import subprocess
-from io import StringIO
 
 import numpy as np
 import torch
@@ -10,8 +10,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 
 from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork
-from util import hard_update, soft_update
-from utils import space_to_size
+from util import hard_update, soft_update,space_to_size
 
 
 def get_freer_gpu():
@@ -37,16 +36,17 @@ class SAC(object):
             policy_pre_activation_weight=0.,
     ):
 
+        self.updates_per_write = args.updates_per_write
         self.policy_pre_activation_weight = policy_pre_activation_weight
         self.policy_std_reg_weight = policy_std_reg_weight
         self.policy_mean_reg_weight = policy_mean_reg_weight
         self.writer = writer
         self.algo = args.algo
         if args.algo == 'pmac':
-            assert args.tau is not None
-            assert args.tau_ is not None
-        self.tau = args.tau
-        self.tau_ = args.tau_ or args.alpha
+            assert args.tau1 is not None
+            assert args.tau2 is not None
+        self.tau1 = args.tau1
+        self.tau2 = args.tau2 or args.alpha
         self.num_inputs = num_inputs
         self.action_space = space_to_size(action_space)
         self.gamma = args.gamma
@@ -204,7 +204,7 @@ class SAC(object):
             JV = 𝔼st~D[0.5(V(st) - (𝔼at~π[Qmin(st,at) - α * log π(at|st)]))^2]
             ∇JV = ∇V(st)(V(st) - Q(st,at) + (α * logπ(at|st)))
             """
-            next_value = new_q_value - (self.tau_ * log_prob)
+            next_value = new_q_value - (self.tau2 * log_prob)
             value_loss = F.mse_loss(value, next_value.detach())
             """
             Reparameterization trick is used to get a low variance estimator
@@ -226,8 +226,8 @@ class SAC(object):
             # value = self.value(state_batch).detach()
             # log_prob_ref_actions = policy_dist.log_prob(ref_actions)
             target_policy = torch.exp(
-                (new_q_value - self.tau_ * ref_log_prob - value) /
-                (self.tau + self.tau_))
+                (new_q_value - self.tau2 * ref_log_prob - value) /
+                (self.tau1 + self.tau2))
             target_policy = torch.clamp(target_policy, max=0.9).detach()
             policy_loss = (target_policy * (target_policy - log_prob)).mean()
             mean_reg_loss = self.policy_mean_reg_weight * (policy_mean**
@@ -278,7 +278,7 @@ class SAC(object):
         elif updates % self.target_update_interval == 0 and self.policy_type == "Gaussian":
             soft_update(self.value_target, self.value, self.smoothing)
 
-        if self.writer:
+        if updates % self.updates_per_write == 0 and self.writer:
             self.writer.add_scalar('value loss', value_loss.item(), updates)
             self.writer.add_scalar('critic1 loss', q1_value_loss.item(),
                                    updates)

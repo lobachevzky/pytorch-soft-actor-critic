@@ -1,5 +1,6 @@
 import math
 
+import gym
 import torch
 
 
@@ -32,3 +33,15 @@ def soft_update(target, source, tau):
 def hard_update(target, source):
     for target_param, param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_(param.data)
+
+def space_to_size(space: gym.Space):
+    if isinstance(space, gym.spaces.Discrete):
+        return space.n
+    elif isinstance(space, (gym.spaces.Dict, gym.spaces.Tuple)):
+        if isinstance(space, gym.spaces.Dict):
+            _spaces = list(space.spaces.values())
+        else:
+            _spaces = list(space.spaces)
+        return sum(space_to_size(s) for s in _spaces)
+    else:
+        return space.shape[0]
