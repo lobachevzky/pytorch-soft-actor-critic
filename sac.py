@@ -1,8 +1,8 @@
 import copy
 import csv
-from io import StringIO
 import os
 import subprocess
+from io import StringIO
 
 import numpy as np
 import torch
@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 
 from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork
-from util import hard_update, soft_update,space_to_size
+from util import hard_update, soft_update, space_to_size
 
 
 def get_freer_gpu():
@@ -228,7 +228,7 @@ class SAC(object):
             target_policy = torch.exp(
                 (new_q_value - self.tau2 * ref_log_prob - value) /
                 (self.tau1 + self.tau2))
-            target_policy = torch.clamp(target_policy, max=0.9).detach()
+            target_policy = torch.clamp(target_policy, max=1.0).detach()
             policy_loss = (target_policy * (target_policy - log_prob)).mean()
             mean_reg_loss = self.policy_mean_reg_weight * (policy_mean**
                                                            2).mean()
