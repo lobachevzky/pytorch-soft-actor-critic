@@ -37,6 +37,7 @@ class SAC(object):
             policy_pre_activation_weight=0.,
     ):
 
+        self.updates_per_write = args.updates_per_write
         self.policy_pre_activation_weight = policy_pre_activation_weight
         self.policy_std_reg_weight = policy_std_reg_weight
         self.policy_mean_reg_weight = policy_mean_reg_weight
@@ -278,7 +279,7 @@ class SAC(object):
         elif updates % self.target_update_interval == 0 and self.policy_type == "Gaussian":
             soft_update(self.value_target, self.value, self.smoothing)
 
-        if self.writer:
+        if updates % self.updates_per_write == 0 and self.writer:
             self.writer.add_scalar('value loss', value_loss.item(), updates)
             self.writer.add_scalar('critic1 loss', q1_value_loss.item(),
                                    updates)
