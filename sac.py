@@ -9,7 +9,7 @@ import torch
 import torch.nn.functional as F
 from torch.optim import Adam
 
-from model import DeterministicPolicy, GaussianPolicy, Critic, ValueNetwork
+from model import Critic, DeterministicPolicy, GaussianPolicy, ValueNetwork
 from util import hard_update, soft_update
 from utils import space_to_size
 
@@ -145,8 +145,8 @@ class SAC(object):
 
         with open('optim.pkl', 'rb') as f:
             optims = pickle.load(f)
-            
-
+        import ipdb
+        ipdb.set_trace()
 
         critic_mapping = {
             self.critic.qf1.linear1: ('qf1', 'fc0'),
