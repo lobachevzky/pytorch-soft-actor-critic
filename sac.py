@@ -26,11 +26,16 @@ def get_freer_gpu():
 
 
 class SAC(object):
-    def __init__(self, num_inputs, action_space, args, writer,
-                 policy_mean_reg_weight=1e-3,
-                 policy_std_reg_weight=1e-3,
-                 policy_pre_activation_weight=0.,
-                 ):
+    def __init__(
+            self,
+            num_inputs,
+            action_space,
+            args,
+            writer,
+            policy_mean_reg_weight=1e-3,
+            policy_std_reg_weight=1e-3,
+            policy_pre_activation_weight=0.,
+    ):
 
         self.policy_pre_activation_weight = policy_pre_activation_weight
         self.policy_std_reg_weight = policy_std_reg_weight
@@ -124,20 +129,97 @@ class SAC(object):
             self.device)
         mask_batch = torch.FloatTensor(np.float32(mask_batch)).unsqueeze(1).to(
             self.device)
+
+        import pickle
+        with open('batch.pkl', 'rb') as f:
+            batch = pickle.load(f)
+        state_batch = batch['observations']
+        next_state_batch = batch['next_observations']
+        action_batch = batch['actions']
+        reward_batch = batch['rewards']
+        mask_batch = 1. - batch['terminals']
+
+        with open('networks.pkl', 'rb') as f:
+            networks = pickle.load(f)
+
+        critic_mapping = {
+            self.critic.linear1: ('qf1', 'fc0'),
+            self.critic.linear2: ('qf1', 'fc1'),
+            self.critic.linear3: ('qf1', 'last_fc'),
+            self.critic.linear4: ('qf2', 'fc0'),
+            self.critic.linear5: ('qf2', 'fc1'),
+            self.critic.linear6: ('qf2', 'last_fc'),
+        }
+        policy_mapping = {
+            self.policy: 'policy',
+            self.reference_policy: 'ref_policy',
+        }
+
+        for target_layer, (source_net, source_layer) in critic_mapping.items():
+            source_dict = dict(networks[source_net])
+            target_layer.load_state_dict(
+                dict(
+                    weight=source_dict[source_layer + '.weight'],
+                    bias=source_dict[source_layer + '.bias'],
+                ))
+
+        for target_net, source_net in policy_mapping.items():
+            layer_mapping = dict(
+                linear1='fc0',
+                linear2='fc1',
+                mean_linear='last_fc',
+                log_std_linear='last_fc_log_std')
+            source_dict = dict(networks[source_net])
+            for target_layer, source_layer in layer_mapping.items():
+                target_net._modules[target_layer].load_state_dict(
+                    dict(
+                        weight=source_dict[source_layer + '.weight'],
+                        bias=source_dict[source_layer + '.bias']))
+
+        value_mapping = {
+            self.value: 'vf',
+            self.value_target: 'target_vf',
+        }
+
+        for target_net, source_net in value_mapping.items():
+            source_dict = dict(networks[source_net])
+            state_dict = dict(
+                **{
+                    f'linear{n + 1}.weight': source_dict[f'fc{n}.weight']
+                    for n in range(2)
+                }, **{
+                    f'linear{n + 1}.bias': source_dict[f'fc{n}.bias']
+                    for n in range(2)
+                }, **{
+                    'linear3.weight': source_dict['last_fc.weight'],
+                    'linear3.bias': source_dict['last_fc.bias'],
+                })
+            target_net.load_state_dict(state_dict)
+
+        print(list(self.value_target.parameters())[0][0])
         """
-        Use two Q-functions to mitigate positive bias in the policy improvement step that is known
+            Use two Q-functions to mitigate positive bias in the policy improvement step that is known
         to degrade performance of value based methods. Two Q-functions also significantly speed
         up training, especially on harder task.
         """
-        expected_q1_value, expected_q2_value = self.critic(
-            state_batch, action_batch)
-        new_action, log_prob, pre_tanh_value, policy_mean, log_std, policy_dist = self.policy.sample(
-            state_batch)
         if self.algo == 'pmac':
-            ref_actions, ref_log_prob, _, _, _, _ = self.reference_policy.sample(
+            *ref_values, _ = self.reference_policy.sample(state_batch)
+            new_action, ref_log_prob, ref_act_tanh, _, _ = [
+                x.detach() for x in ref_values
+            ]
+            _, _, pre_tanh_value, policy_mean, log_std, policy_dist = self.policy.sample(
                 state_batch)
+            log_prob = policy_dist.log_prob(ref_act_tanh)
+        else:
+            new_action, log_prob, pre_tanh_value, policy_mean, log_std, policy_dist = self.policy.sample(
+                state_batch)
+        value = self.value(state_batch)
+        target_value = self.value_target(next_state_batch)
+        next_q_value = reward_batch + mask_batch * self.gamma * (
+            target_value).detach()
+        q1_value, q2_value = self.critic(state_batch, action_batch)
 
-        if self.policy_type == "Gaussian":
+        if False:  # self.policy_type == "Gaussian":
             if self.automatic_entropy_tuning:
                 """
                 Alpha Loss
@@ -157,11 +239,7 @@ class SAC(object):
             """
             Including a separate function approximator for the soft value can stabilize training.
             """
-            expected_value = self.value(state_batch)
-            target_value = self.value_target(next_state_batch)
-            next_q_value = reward_batch + mask_batch * self.gamma * (
-                target_value).detach()
-        else:
+        elif False:
             """
             There is no need in principle to include a separate function approximator for the state value.
             We use a target critic network for deterministic policy and eradicate the value value network completely.
@@ -180,10 +258,10 @@ class SAC(object):
         JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
         ∇JQ = ∇Q(st,at)(Q(st,at) - r(st,at) - γV(target)(st+1))
         """
-        q1_value_loss = F.mse_loss(expected_q1_value, next_q_value)
-        q2_value_loss = F.mse_loss(expected_q2_value, next_q_value)
+        q1_value_loss = F.mse_loss(q1_value, next_q_value)
+        q2_value_loss = F.mse_loss(q2_value, next_q_value)
         q1_new, q2_new = self.critic(state_batch, new_action)
-        expected_new_q_value = torch.min(q1_new, q2_new)
+        new_q_value = torch.min(q1_new, q2_new)
 
         if self.algo == 'sac':
             """
@@ -194,8 +272,8 @@ class SAC(object):
             JV = 𝔼st~D[0.5(V(st) - (𝔼at~π[Qmin(st,at) - α * log π(at|st)]))^2]
             ∇JV = ∇V(st)(V(st) - Q(st,at) + (α * logπ(at|st)))
             """
-            next_value = expected_new_q_value - (self.tau_ * log_prob)
-            value_loss = F.mse_loss(expected_value, next_value.detach())
+            next_value = new_q_value - (self.tau_ * log_prob)
+            value_loss = F.mse_loss(value, next_value.detach())
             """
             Reparameterization trick is used to get a low variance estimator
             f(εt;st) = action sampled from the policy
@@ -203,8 +281,7 @@ class SAC(object):
             Jπ = 𝔼st∼D,εt∼N[α * logπ(f(εt;st)|st) − Q(st,f(εt;st))]
             ∇Jπ = ∇log π + ([∇at (α * logπ(at|st)) − ∇at Q(st,at)])∇f(εt;st)
             """
-            policy_loss = (
-                (self.alpha * log_prob) - expected_new_q_value).mean()
+            policy_loss = ((self.alpha * log_prob) - new_q_value).mean()
 
             # Regularization Loss
             mean_loss = 0.001 * policy_mean.pow(2).mean()
@@ -212,35 +289,25 @@ class SAC(object):
 
             policy_loss += mean_loss + std_loss
         elif self.algo == 'pmac':
-            ref_q = torch.min(*self.critic(state_batch, ref_actions))
-            value_loss = F.mse_loss(expected_value, ref_q.detach())
+            value_loss = F.mse_loss(value, new_q_value.detach())
             #
             # value = self.value(state_batch).detach()
             # log_prob_ref_actions = policy_dist.log_prob(ref_actions)
-            # policy_loss = -torch.exp(
-            #     (ref_q - self.tau_ * ref_log_prob - value) /
-            #     (self.tau + self.tau_)) * log_prob_ref_actions
-            # policy_loss = policy_loss.mean()
-            q_new_actions = ref_q
-            log_pi_ref = ref_log_prob
-            v_pred = expected_value
-            self.tau1 = self.tau
-            self.tau2 = self.tau_
-            log_pi = policy_dist.log_prob(ref_actions)
-            policy_log_std = log_std
-
             target_policy = torch.exp(
-                (q_new_actions - self.tau2 * log_pi_ref - v_pred) / (self.tau1 + self.tau2)).detach()
-            target_policy = torch.clamp(target_policy, max=0.9)
-            policy_loss = (target_policy * (target_policy - log_pi)).mean()
-            mean_reg_loss = self.policy_mean_reg_weight * (policy_mean ** 2).mean()
-            std_reg_loss = self.policy_std_reg_weight * (policy_log_std ** 2).mean()
+                (new_q_value - self.tau_ * ref_log_prob - value) /
+                (self.tau + self.tau_))
+            # target_policy = torch.clamp(target_policy, max=0.9).detach()
+            policy_loss = (target_policy * (target_policy - log_prob)).mean()
+            mean_reg_loss = self.policy_mean_reg_weight * (policy_mean**
+                                                           2).mean()
+            std_reg_loss = self.policy_std_reg_weight * (log_std**2).mean()
             # pre_tanh_value = policy_outputs[-1]
             pre_activation_reg_loss = self.policy_pre_activation_weight * (
-                (pre_tanh_value ** 2).sum(dim=1).mean()
-            )
+                (pre_tanh_value**2).sum(dim=1).mean())
             policy_reg_loss = mean_reg_loss + std_reg_loss + pre_activation_reg_loss
             policy_loss = policy_loss + policy_reg_loss
+            import ipdb
+            ipdb.set_trace()
         else:
             raise RuntimeError
 
@@ -285,13 +352,11 @@ class SAC(object):
         self.writer.add_scalar('critic1 loss', q1_value_loss.item(), updates)
         self.writer.add_scalar('critic2 loss', q2_value_loss.item(), updates)
         self.writer.add_scalar('policy loss', policy_loss.item(), updates)
-        self.writer.add_scalar('Q',
-                               expected_new_q_value.mean().item(), updates)
-        self.writer.add_scalar('V', expected_value.mean().item(), updates)
-        self.writer.add_scalar('Q1', expected_q1_value.mean().item(), updates)
-        self.writer.add_scalar('Q2', expected_q2_value.mean().item(), updates)
-        self.writer.add_scalar('value',
-                               expected_q2_value.mean().item(), updates)
+        self.writer.add_scalar('Q', new_q_value.mean().item(), updates)
+        self.writer.add_scalar('V', value.mean().item(), updates)
+        self.writer.add_scalar('Q1', q1_value.mean().item(), updates)
+        self.writer.add_scalar('Q2', q2_value.mean().item(), updates)
+        self.writer.add_scalar('value', q2_value.mean().item(), updates)
         self.writer.add_scalar('std dev', log_std.exp().mean().item(), updates)
 
     # Save model parameters

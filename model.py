@@ -1,8 +1,7 @@
-
 import torch
-from torch.distributions import Normal
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import Normal
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -93,7 +92,7 @@ class GaussianPolicy(nn.Module):
         action = torch.tanh(x_t)
         log_prob = normal.log_prob(x_t)
         # Enforcing Action Bound
-        log_prob -= torch.log(1 - action.pow(2) + epsilon)
+        # log_prob -= torch.log(1 - action.pow(2) + epsilon)
         log_prob = log_prob.sum(1, keepdim=True)
         return action, log_prob, x_t, mean, log_std, normal
 
