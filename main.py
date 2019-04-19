@@ -7,8 +7,8 @@ import random
 import gym
 import ipdb
 import numpy as np
-from tensorboardX import SummaryWriter
 import torch
+from tensorboardX import SummaryWriter
 
 from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
@@ -116,7 +116,10 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 random.seed(args.seed)
 
-writer = SummaryWriter(args.logdir)
+if args.logdir is None:
+    writer = None
+else:
+    writer = SummaryWriter(args.logdir)
 
 # Agent
 agent = SAC(
@@ -174,7 +177,8 @@ for i_episode in itertools.count():
     if total_numsteps > args.num_steps:
         break
 
-    writer.add_scalar('train reward', episode_reward, i_episode)
+    if writer:
+        writer.add_scalar('train reward', episode_reward, i_episode)
     rewards.append(episode_reward)
     print("Episode: {}, total numsteps: {}, reward: {}, average reward: {}".
           format(i_episode, total_numsteps, np.round(rewards[-1], 2),
@@ -193,7 +197,8 @@ for i_episode in itertools.count():
             if done:
                 break
 
-        writer.add_scalar('test reward', episode_reward, i_episode)
+        if writer:
+            writer.add_scalar('test reward', episode_reward, i_episode)
 
         test_rewards.append(episode_reward)
         print("----------------------------------------")

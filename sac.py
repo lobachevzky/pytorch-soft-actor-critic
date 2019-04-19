@@ -129,74 +129,6 @@ class SAC(object):
             self.device)
         mask_batch = torch.FloatTensor(np.float32(mask_batch)).unsqueeze(1).to(
             self.device)
-
-        import pickle
-        with open('batch.pkl', 'rb') as f:
-            batch = pickle.load(f)
-        state_batch = batch['observations']
-        next_state_batch = batch['next_observations']
-        action_batch = batch['actions']
-        reward_batch = batch['rewards']
-        mask_batch = 1. - batch['terminals']
-
-        with open('networks.pkl', 'rb') as f:
-            networks = pickle.load(f)
-
-        critic_mapping = {
-            self.critic.linear1: ('qf1', 'fc0'),
-            self.critic.linear2: ('qf1', 'fc1'),
-            self.critic.linear3: ('qf1', 'last_fc'),
-            self.critic.linear4: ('qf2', 'fc0'),
-            self.critic.linear5: ('qf2', 'fc1'),
-            self.critic.linear6: ('qf2', 'last_fc'),
-        }
-        policy_mapping = {
-            self.policy: 'policy',
-            self.reference_policy: 'ref_policy',
-        }
-
-        for target_layer, (source_net, source_layer) in critic_mapping.items():
-            source_dict = dict(networks[source_net])
-            target_layer.load_state_dict(
-                dict(
-                    weight=source_dict[source_layer + '.weight'],
-                    bias=source_dict[source_layer + '.bias'],
-                ))
-
-        for target_net, source_net in policy_mapping.items():
-            layer_mapping = dict(
-                linear1='fc0',
-                linear2='fc1',
-                mean_linear='last_fc',
-                log_std_linear='last_fc_log_std')
-            source_dict = dict(networks[source_net])
-            for target_layer, source_layer in layer_mapping.items():
-                target_net._modules[target_layer].load_state_dict(
-                    dict(
-                        weight=source_dict[source_layer + '.weight'],
-                        bias=source_dict[source_layer + '.bias']))
-
-        value_mapping = {
-            self.value: 'vf',
-            self.value_target: 'target_vf',
-        }
-
-        for target_net, source_net in value_mapping.items():
-            source_dict = dict(networks[source_net])
-            state_dict = dict(
-                **{
-                    f'linear{n + 1}.weight': source_dict[f'fc{n}.weight']
-                    for n in range(2)
-                }, **{
-                    f'linear{n + 1}.bias': source_dict[f'fc{n}.bias']
-                    for n in range(2)
-                }, **{
-                    'linear3.weight': source_dict['last_fc.weight'],
-                    'linear3.bias': source_dict['last_fc.bias'],
-                })
-            target_net.load_state_dict(state_dict)
-
-        print(list(self.value_target.parameters())[0][0])
         """
             Use two Q-functions to mitigate positive bias in the policy improvement step that is known
         to degrade performance of value based methods. Two Q-functions also significantly speed
@@ -296,7 +228,7 @@ class SAC(object):
             target_policy = torch.exp(
                 (new_q_value - self.tau_ * ref_log_prob - value) /
                 (self.tau + self.tau_))
-            # target_policy = torch.clamp(target_policy, max=0.9).detach()
+            target_policy = torch.clamp(target_policy, max=0.9).detach()
             policy_loss = (target_policy * (target_policy - log_prob)).mean()
             mean_reg_loss = self.policy_mean_reg_weight * (policy_mean**
                                                            2).mean()
@@ -306,8 +238,6 @@ class SAC(object):
                 (pre_tanh_value**2).sum(dim=1).mean())
             policy_reg_loss = mean_reg_loss + std_reg_loss + pre_activation_reg_loss
             policy_loss = policy_loss + policy_reg_loss
-            import ipdb
-            ipdb.set_trace()
         else:
             raise RuntimeError
 
@@ -348,16 +278,20 @@ class SAC(object):
         elif updates % self.target_update_interval == 0 and self.policy_type == "Gaussian":
             soft_update(self.value_target, self.value, self.smoothing)
 
-        self.writer.add_scalar('value loss', value_loss.item(), updates)
-        self.writer.add_scalar('critic1 loss', q1_value_loss.item(), updates)
-        self.writer.add_scalar('critic2 loss', q2_value_loss.item(), updates)
-        self.writer.add_scalar('policy loss', policy_loss.item(), updates)
-        self.writer.add_scalar('Q', new_q_value.mean().item(), updates)
-        self.writer.add_scalar('V', value.mean().item(), updates)
-        self.writer.add_scalar('Q1', q1_value.mean().item(), updates)
-        self.writer.add_scalar('Q2', q2_value.mean().item(), updates)
-        self.writer.add_scalar('value', q2_value.mean().item(), updates)
-        self.writer.add_scalar('std dev', log_std.exp().mean().item(), updates)
+        if self.writer:
+            self.writer.add_scalar('value loss', value_loss.item(), updates)
+            self.writer.add_scalar('critic1 loss', q1_value_loss.item(),
+                                   updates)
+            self.writer.add_scalar('critic2 loss', q2_value_loss.item(),
+                                   updates)
+            self.writer.add_scalar('policy loss', policy_loss.item(), updates)
+            self.writer.add_scalar('Q', new_q_value.mean().item(), updates)
+            self.writer.add_scalar('V', value.mean().item(), updates)
+            self.writer.add_scalar('Q1', q1_value.mean().item(), updates)
+            self.writer.add_scalar('Q2', q2_value.mean().item(), updates)
+            self.writer.add_scalar('value', q2_value.mean().item(), updates)
+            self.writer.add_scalar('std dev',
+                                   log_std.exp().mean().item(), updates)
 
     # Save model parameters
     def save_model(self,
