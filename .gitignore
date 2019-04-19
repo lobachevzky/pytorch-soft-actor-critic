@@ -6,3 +6,4 @@ runs
 runs.db
 .runs
 run.json
+*.pkl
