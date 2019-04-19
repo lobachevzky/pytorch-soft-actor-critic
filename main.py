@@ -152,7 +152,7 @@ for i_episode in itertools.count():
         memory.push(state, action, reward, next_state,
                     mask)  # Append transition to memory
 
-        if len(memory) > args.batch_size:
+        if len(memory) > args.batch_size and total_numsteps % args.steps_per_epoch == 0:
             if agent.algo == 'pmac':
                 hard_update(agent.reference_policy, agent.policy)
             for i in range(args.updates_per_step
