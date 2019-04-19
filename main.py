@@ -6,8 +6,8 @@ import random
 
 import gym
 import numpy as np
-from tensorboardX import SummaryWriter
 import torch
+from tensorboardX import SummaryWriter
 
 from replay_memory import ReplayMemory
 from sac import SAC
@@ -83,7 +83,7 @@ parser.add_argument(
 parser.add_argument(
     '--episodes-per-eval', type=int, default=10, metavar='N', help=' ')
 parser.add_argument(
-    '--updates-per-write', type=int, default=10, metavar='N', help=' ')
+    '--updates-per-write', type=int, default=100, metavar='N', help=' ')
 parser.add_argument(
     '--start-steps',
     type=int,
