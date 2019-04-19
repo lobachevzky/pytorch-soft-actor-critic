@@ -145,16 +145,29 @@ class SAC(object):
 
         with open('optim.pkl', 'rb') as f:
             optims = pickle.load(f)
-        import ipdb
-        ipdb.set_trace()
+        optim_mapping = {
+            self.policy_optim: 'policy',
+            self.value_optim: 'vf',
+            self.q1_optim: 'qf1',
+            self.q2_optim: 'qf2',
+        }
+
+        optim_dict = dict(optims)
+        for target, source in optim_mapping.items():
+            import ipdb
+            ipdb.set_trace()
+            target.load_state_dict(optim_dict[source])
+
+        print(optim_dict['qf1'])
+        print(self.q1_optim.state_dict())
 
         critic_mapping = {
-            self.critic.qf1.linear1: ('qf1', 'fc0'),
-            self.critic.qf1.linear2: ('qf1', 'fc1'),
-            self.critic.qf1.linear3: ('qf1', 'last_fc'),
-            self.critic.qf2.linear1: ('qf2', 'fc0'),
-            self.critic.qf2.linear2: ('qf2', 'fc1'),
-            self.critic.qf2.linear3: ('qf2', 'last_fc'),
+            self.critic.q1.linear1: ('qf1', 'fc0'),
+            self.critic.q1.linear2: ('qf1', 'fc1'),
+            self.critic.q1.linear3: ('qf1', 'last_fc'),
+            self.critic.q2.linear1: ('qf2', 'fc0'),
+            self.critic.q2.linear2: ('qf2', 'fc1'),
+            self.critic.q2.linear3: ('qf2', 'last_fc'),
         }
         policy_mapping = {
             self.policy: 'policy',
@@ -317,17 +330,17 @@ class SAC(object):
         else:
             raise RuntimeError
 
-        self.critic_optim.zero_grad()
+        self.q1_optim.zero_grad()
         q1_value_loss.backward()
         if self.clip:
             torch.nn.utils.clip_grad_norm(self.critic.parameters(), self.clip)
-        self.critic_optim.step()
+        self.q1_optim.step()
 
-        self.critic_optim.zero_grad()
+        self.q2_optim.zero_grad()
         q2_value_loss.backward()
         if self.clip:
             torch.nn.utils.clip_grad_norm(self.critic.parameters(), self.clip)
-        self.critic_optim.step()
+        self.q2_optim.step()
 
         if self.policy_type == "Gaussian":
             self.value_optim.zero_grad()
