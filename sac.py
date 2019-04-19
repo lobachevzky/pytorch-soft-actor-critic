@@ -1,8 +1,8 @@
 import copy
 import csv
+from io import StringIO
 import os
 import subprocess
-from io import StringIO
 
 import numpy as np
 import torch

@@ -5,12 +5,10 @@ import itertools
 import random
 
 import gym
-import ipdb
 import numpy as np
-import torch
 from tensorboardX import SummaryWriter
+import torch
 
-from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
 from util import hard_update
@@ -84,11 +82,7 @@ parser.add_argument(
     metavar='N',
     help='model updates per simulator step')
 parser.add_argument(
-    '--episodes-per-eval',
-    type=int,
-    default=10,
-    metavar='N',
-    help=' ')
+    '--episodes-per-eval', type=int, default=10, metavar='N', help=' ')
 parser.add_argument(
     '--start-steps',
     type=int,
