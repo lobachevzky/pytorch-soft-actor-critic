@@ -151,7 +151,7 @@ class SAC(object):
         next_q_value = reward_batch + mask_batch * self.gamma * (
             target_value).detach()
 
-        if False:  # self.policy_type == "Gaussian":
+        if self.policy_type == "Gaussian":
             if self.automatic_entropy_tuning:
                 """
                 Alpha Loss
