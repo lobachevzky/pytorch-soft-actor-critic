@@ -59,7 +59,7 @@ parser.add_argument(
     'Temperature parameter α determines the relative importance of the entropy term against the reward'
 )
 parser.add_argument(
-    '--automatic_entropy_tuning',
+    '--automatic-entropy-tuning',
     type=bool,
     default=False,
     metavar='G',
@@ -78,25 +78,25 @@ parser.add_argument(
 parser.add_argument(
     '--hidden_size', type=int, default=300, metavar='N', help='hidden size')
 parser.add_argument(
-    '--updates_per_step',
+    '--updates-per-step',
     type=int,
     default=1,
     metavar='N',
     help='model updates per simulator step')
 parser.add_argument(
-    '--start_steps',
+    '--start-steps',
     type=int,
     default=10000,
     metavar='N',
     help='Steps sampling random actions')
 parser.add_argument(
-    '--target_update_interval',
+    '--target-update-interval',
     type=int,
     default=1,
     metavar='N',
     help='Value target update per no. of updates per step')
 parser.add_argument(
-    '--replay_size',
+    '--replay-size',
     type=int,
     default=1000000,
     metavar='N',
@@ -152,7 +152,7 @@ for i_episode in itertools.count():
         memory.push(state, action, reward, next_state,
                     mask)  # Append transition to memory
 
-        if len(memory) > args.batch_size and total_numsteps % args.steps_per_epoch == 0:
+        if len(memory) > args.batch_size:
             if agent.algo == 'pmac':
                 hard_update(agent.reference_policy, agent.policy)
             for i in range(args.updates_per_step
