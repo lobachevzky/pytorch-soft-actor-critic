@@ -28,6 +28,7 @@ parser.add_argument(
     type=bool,
     default=True,
     help='Evaluates a policy a policy every 10 episode (default:True)')
+parser.add_argument('--clamp', type=float, default=0.9, metavar='G', help=' ')
 parser.add_argument(
     '--gamma',
     type=float,

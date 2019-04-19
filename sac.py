@@ -52,6 +52,7 @@ class SAC(object):
         self.gamma = args.gamma
         self.smoothing = args.smoothing
         self.clip = args.clip
+        self.clamp = args.clamp
 
         self.device = torch.device('cpu')
         if args.cuda and torch.cuda.is_available():
@@ -228,7 +229,7 @@ class SAC(object):
             target_policy = torch.exp(
                 (new_q_value - self.tau2 * ref_log_prob - value) /
                 (self.tau1 + self.tau2))
-            target_policy = torch.clamp(target_policy, max=1.0).detach()
+            target_policy = torch.clamp(target_policy, max=self.clamp).detach()
             policy_loss = (target_policy * (target_policy - log_prob)).mean()
             mean_reg_loss = self.policy_mean_reg_weight * (policy_mean**
                                                            2).mean()
