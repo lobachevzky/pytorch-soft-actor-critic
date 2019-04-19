@@ -30,10 +30,10 @@ class SAC(object):
         self.writer = writer
         self.algo = args.algo
         if args.algo == 'pmac':
-            assert args.tau is not None
-            assert args.tau_ is not None
-        self.tau = args.tau
-        self.tau_ = args.tau_ or args.alpha
+            assert args.tau1 is not None
+            assert args.tau2 is not None
+        self.tau1 = args.tau1
+        self.tau2 = args.tau2 or args.alpha
         self.num_inputs = num_inputs
         self.action_space = space_to_size(action_space)
         self.gamma = args.gamma
@@ -186,7 +186,7 @@ class SAC(object):
             JV = 𝔼st~D[0.5(V(st) - (𝔼at~π[Qmin(st,at) - α * log π(at|st)]))^2]
             ∇JV = ∇V(st)(V(st) - Q(st,at) + (α * logπ(at|st)))
             """
-            next_value = expected_new_q_value - (self.tau_ * log_prob)
+            next_value = expected_new_q_value - (self.tau2 * log_prob)
             value_loss = F.mse_loss(expected_value, next_value.detach())
             """
             Reparameterization trick is used to get a low variance estimator
@@ -204,15 +204,15 @@ class SAC(object):
 
             policy_loss += mean_loss + std_loss
         elif self.algo == 'pmac':
-            next_value = expected_new_q_value - (self.tau_ * ref_log_prob)
+            next_value = expected_new_q_value - (self.tau2 * ref_log_prob)
             value_loss = F.mse_loss(expected_value, next_value.detach())
 
             ref_q = torch.min(*self.critic(state_batch, ref_actions))
             value = self.value(state_batch).detach()
             log_prob_ref_actions = policy_dist.log_prob(ref_actions)
             policy_loss = -torch.exp(
-                (ref_q - self.tau_ * ref_log_prob - value) /
-                (self.tau + self.tau_)) * log_prob_ref_actions
+                (ref_q - self.tau2 * ref_log_prob - value) /
+                (self.tau1 + self.tau2)) * log_prob_ref_actions
             policy_loss = policy_loss.mean()
         else:
             raise RuntimeError
