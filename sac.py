@@ -134,6 +134,7 @@ class SAC(object):
         to degrade performance of value based methods. Two Q-functions also significantly speed
         up training, especially on harder task.
         """
+        q1_value, q2_value = self.critic(state_batch, action_batch)
         if self.algo == 'pmac':
             *ref_values, _ = self.reference_policy.sample(state_batch)
             new_action, ref_log_prob, ref_act_tanh, _, _ = [
@@ -145,13 +146,7 @@ class SAC(object):
         else:
             new_action, log_prob, pre_tanh_value, policy_mean, log_std, policy_dist = self.policy.sample(
                 state_batch)
-        value = self.value(state_batch)
-        target_value = self.value_target(next_state_batch)
-        next_q_value = reward_batch + mask_batch * self.gamma * (
-            target_value).detach()
-        q1_value, q2_value = self.critic(state_batch, action_batch)
-
-        if False:  # self.policy_type == "Gaussian":
+        if self.policy_type == "Gaussian":
             if self.automatic_entropy_tuning:
                 """
                 Alpha Loss
@@ -171,7 +166,12 @@ class SAC(object):
             """
             Including a separate function approximator for the soft value can stabilize training.
             """
-        elif False:
+            value = self.value(state_batch)
+            target_value = self.value_target(next_state_batch)
+            next_q_value = reward_batch + mask_batch * self.gamma * (
+                target_value).detach()
+
+        else:
             """
             There is no need in principle to include a separate function approximator for the state value.
             We use a target critic network for deterministic policy and eradicate the value value network completely.
