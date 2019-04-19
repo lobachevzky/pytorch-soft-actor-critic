@@ -5,12 +5,10 @@ import itertools
 import random
 
 import gym
-import ipdb
 import numpy as np
 from tensorboardX import SummaryWriter
 import torch
 
-from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
 from util import hard_update
@@ -59,7 +57,7 @@ parser.add_argument(
     'Temperature parameter α determines the relative importance of the entropy term against the reward'
 )
 parser.add_argument(
-    '--automatic_entropy_tuning',
+    '--automatic-entropy-tuning',
     type=bool,
     default=False,
     metavar='G',
@@ -67,36 +65,38 @@ parser.add_argument(
 parser.add_argument(
     '--seed', type=int, default=0, metavar='N', help='random seed')
 parser.add_argument(
-    '--batch_size', type=int, default=256, metavar='N', help='batch size')
+    '--batch-size', type=int, default=256, metavar='N', help='batch size')
 parser.add_argument('--no-cuda', dest='cuda', action='store_false')
 parser.add_argument(
-    '--num_steps',
+    '--num-steps',
     type=int,
     default=1e10,
     metavar='N',
     help='maximum number of steps')
 parser.add_argument(
-    '--hidden_size', type=int, default=300, metavar='N', help='hidden size')
+    '--hidden-size', type=int, default=300, metavar='N', help='hidden size')
 parser.add_argument(
-    '--updates_per_step',
+    '--updates-per-step',
     type=int,
-    default=100,
+    default=1,
     metavar='N',
     help='model updates per simulator step')
 parser.add_argument(
-    '--start_steps',
+    '--episodes-per-eval', type=int, default=10, metavar='N', help=' ')
+parser.add_argument(
+    '--start-steps',
     type=int,
     default=10000,
     metavar='N',
     help='Steps sampling random actions')
 parser.add_argument(
-    '--target_update_interval',
+    '--target-update-interval',
     type=int,
     default=1,
     metavar='N',
     help='Value target update per no. of updates per step')
 parser.add_argument(
-    '--replay_size',
+    '--replay-size',
     type=int,
     default=1000000,
     metavar='N',
@@ -116,7 +116,10 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 random.seed(args.seed)
 
-writer = SummaryWriter(args.logdir)
+if args.logdir is None:
+    writer = None
+else:
+    writer = SummaryWriter(args.logdir)
 
 # Agent
 agent = SAC(
@@ -174,13 +177,14 @@ for i_episode in itertools.count():
     if total_numsteps > args.num_steps:
         break
 
-    writer.add_scalar('train reward', episode_reward, i_episode)
+    if writer:
+        writer.add_scalar('train reward', episode_reward, i_episode)
     rewards.append(episode_reward)
     print("Episode: {}, total numsteps: {}, reward: {}, average reward: {}".
           format(i_episode, total_numsteps, np.round(rewards[-1], 2),
                  np.round(np.mean(rewards[-100:]), 2)))
 
-    if i_episode % 10 == 0 and args.eval == True:
+    if i_episode % args.episodes_per_eval == 0 and args.eval == True:
         state = env.reset()
         episode_reward = 0
         while True:
@@ -193,7 +197,8 @@ for i_episode in itertools.count():
             if done:
                 break
 
-        writer.add_scalar('test reward', episode_reward, i_episode)
+        if writer:
+            writer.add_scalar('test reward', episode_reward, i_episode)
 
         test_rewards.append(episode_reward)
         print("----------------------------------------")
