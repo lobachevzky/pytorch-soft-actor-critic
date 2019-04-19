@@ -9,9 +9,11 @@ import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 
+from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
-from util import hard_update, space_to_size
+from util import hard_update
+from utils import space_to_size
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -97,7 +99,13 @@ parser.add_argument(
     metavar='N',
     help='Value target update per no. of updates per step')
 parser.add_argument(
-    '--replay-size',
+    '--reference-policy-update-interval',
+    type=int,
+    default=100,
+    metavar='N',
+    help='Value target update per no. of updates per step')
+parser.add_argument(
+    '--replay_size',
     type=int,
     default=1000000,
     metavar='N',
@@ -155,8 +163,6 @@ for i_episode in itertools.count():
                     mask)  # Append transition to memory
 
         if len(memory) > args.batch_size:
-            if agent.algo == 'pmac':
-                hard_update(agent.reference_policy, agent.policy)
             for i in range(args.updates_per_step
                            ):  # Number of updates per step in environment
                 # Sample a batch from memory
@@ -166,6 +172,10 @@ for i_episode in itertools.count():
                 agent.update_parameters(state_batch, action_batch,
                                         reward_batch, next_state_batch,
                                         mask_batch, updates)
+
+                interval = args.reference_policy_update_interval
+                if agent.algo == 'pmac' and updates % interval == 0:
+                    hard_update(agent.reference_policy, agent.policy)
 
                 updates += 1
 
