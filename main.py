@@ -112,7 +112,8 @@ def main(env_name, seed, logdir, replay_size, start_steps, batch_size,
                     break
 
             if writer:
-                writer.add_scalar('test reward', episode_reward, total_numsteps)
+                writer.add_scalar('test reward', episode_reward,
+                                  total_numsteps)
 
             test_rewards.append(episode_reward)
             print("----------------------------------------")
@@ -147,9 +148,7 @@ parser.add_argument(
     help='target smoothing coefficient(τ)')
 parser.add_argument('--clip', type=float, help='gradient clipping')
 parser.add_argument(
-    '--critic-lr', type=float, default=5e-4, help='critic learning rate')
-parser.add_argument(
-    '--actor-lr', type=float, default=5e-4, help='actor learning rate')
+    '--lr', type=float, required=True, help='learning rate')
 parser.add_argument(
     '--alpha-lr', type=float, default=0.0003, help='alpha learning rate')
 parser.add_argument(
