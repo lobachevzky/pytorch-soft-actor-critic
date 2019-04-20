@@ -1,9 +1,9 @@
 from collections import namedtuple
 
 import torch
+from torch.distributions import Normal
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions import Normal
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -69,8 +69,7 @@ class QNetwork(nn.Module):
 
 
 class GaussianPolicy(nn.Module):
-    def __init__(self, num_inputs, num_actions, hidden_dim, device):
-        self.device = device
+    def __init__(self, num_inputs, num_actions, hidden_dim):
         super(GaussianPolicy, self).__init__()
 
         self.linear1 = nn.Linear(num_inputs, hidden_dim)

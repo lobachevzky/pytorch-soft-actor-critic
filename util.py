@@ -2,7 +2,6 @@ import argparse
 import math
 from typing import List
 
-import numpy as np
 import gym
 import torch
 
