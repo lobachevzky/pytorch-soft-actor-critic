@@ -93,13 +93,13 @@ class GaussianPolicy(nn.Module):
         std = log_std.exp()
         normal = Normal(mean, std)
 
-        act_tanh = normal.sample()
+        x_t = normal.rsample()
 
-        act = torch.tanh(act_tanh)
-        log_prob = normal.log_prob(act_tanh) - torch.log(1 - act**2 + 1e-6)
+        act = torch.tanh(x_t)
+        log_prob = normal.log_prob(x_t) - torch.log(1 - act**2 + 1e-6)
         log_prob = log_prob.sum(dim=1, keepdim=True)
 
-        return ActValues(act, mean, log_std, log_prob, std, act_tanh, normal)
+        return ActValues(act, mean, log_std, log_prob, std, x_t, normal)
 
 
 class DeterministicPolicy(nn.Module):
