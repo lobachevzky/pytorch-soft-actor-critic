@@ -29,73 +29,88 @@ class SAC(object):
             self,
             num_inputs,
             action_space,
-            args,
+            updates_per_write,
+            algo,
+            tau1,
+            tau2,
+            alpha,
+            gamma,
+            smoothing,
+            clip,
+            cuda,
+            policy,
+            target_update_interval,
+            automatic_entropy_tuning,
+            hidden_size,
+            critic_lr,
+            actor_lr,
+            alpha_lr,
             writer,
             policy_mean_reg_weight=1e-3,
             policy_std_reg_weight=1e-3,
             policy_pre_activation_weight=0.,
     ):
 
-        self.updates_per_write = args.updates_per_write
+        self.updates_per_write = updates_per_write
         self.policy_pre_activation_weight = policy_pre_activation_weight
         self.policy_std_reg_weight = policy_std_reg_weight
         self.policy_mean_reg_weight = policy_mean_reg_weight
         self.writer = writer
-        self.algo = args.algo
-        if args.algo == 'pmac':
-            assert args.tau1 is not None
-            assert args.tau2 is not None
-        self.tau1 = args.tau1
-        self.tau2 = args.tau2 or args.alpha
+        self.algo = algo
+        if algo == 'pmac':
+            assert tau1 is not None
+            assert tau2 is not None
+        self.tau1 = tau1
+        self.tau2 = tau2 or alpha
         self.num_inputs = num_inputs
         self.action_space = space_to_size(action_space)
-        self.gamma = args.gamma
-        self.smoothing = args.smoothing
-        self.clip = args.clip
+        self.gamma = gamma
+        self.smoothing = smoothing
+        self.clip = clip
 
         self.device = torch.device('cpu')
-        if args.cuda and torch.cuda.is_available():
+        if cuda and torch.cuda.is_available():
             self.device = torch.device('cuda', index=get_freer_gpu())
 
-        self.policy_type = args.policy
-        self.target_update_interval = args.target_update_interval
-        self.automatic_entropy_tuning = args.automatic_entropy_tuning
+        self.policy_type = policy
+        self.target_update_interval = target_update_interval
+        self.automatic_entropy_tuning = automatic_entropy_tuning
 
         self.critic = QNetwork(self.num_inputs, self.action_space,
-                               args.hidden_size)
-        self.critic_optim = Adam(self.critic.parameters(), lr=args.critic_lr)
+                               hidden_size)
+        self.critic_optim = Adam(self.critic.parameters(), lr=critic_lr)
 
         if self.policy_type == "Gaussian":
-            self.alpha = args.alpha
+            self.alpha = alpha
             # Target Entropy = −dim(A) (e.g. , -6 for HalfCheetah-v2) as given in the paper
             if self.automatic_entropy_tuning:
                 self.target_entropy = -torch.prod(
                     torch.Tensor(action_space.shape)).item()
                 self.log_alpha = torch.zeros(1, requires_grad=True)
-                self.alpha_optim = Adam([self.log_alpha], lr=args.alpha_lr)
+                self.alpha_optim = Adam([self.log_alpha], lr=alpha_lr)
             else:
                 pass
 
             self.policy = GaussianPolicy(self.num_inputs, self.action_space,
-                                         args.hidden_size)
+                                         hidden_size)
             self.reference_policy = None
-            if args.algo == 'pmac':
+            if algo == 'pmac':
                 self.reference_policy = copy.deepcopy(self.policy)
                 self.reference_policy.to(self.device)
             self.policy_optim = Adam(
-                self.policy.parameters(), lr=args.actor_lr)
+                self.policy.parameters(), lr=actor_lr)
 
-            self.value = ValueNetwork(self.num_inputs, args.hidden_size)
-            self.value_target = ValueNetwork(self.num_inputs, args.hidden_size)
-            self.value_optim = Adam(self.value.parameters(), lr=args.critic_lr)
+            self.value = ValueNetwork(self.num_inputs, hidden_size)
+            self.value_target = ValueNetwork(self.num_inputs, hidden_size)
+            self.value_optim = Adam(self.value.parameters(), lr=critic_lr)
             hard_update(self.value_target, self.value)
         else:
             self.policy = DeterministicPolicy(
-                self.num_inputs, self.action_space, args.hidden_size)
-            self.policy_optim = Adam(self.policy.parameters(), lr=args.lr)
+                self.num_inputs, self.action_space, hidden_size)
+            self.policy_optim = Adam(self.policy.parameters(), lr=critic_lr)
 
             self.critic_target = QNetwork(self.num_inputs, self.action_space,
-                                          args.hidden_size)
+                                          hidden_size)
             hard_update(self.critic_target, self.critic)
             self.critic_target.to(self.device)
 
@@ -270,7 +285,7 @@ class SAC(object):
         self.policy_optim.step()
         """
         We update the target weights to match the current value function weights periodically
-        Update target parameter after every n(args.target_update_interval) updates
+        Update target parameter after every n(target_update_interval) updates
         """
         if updates % self.target_update_interval == 0 and self.policy_type == "Deterministic":
             soft_update(self.critic_target, self.critic, self.smoothing)
