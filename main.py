@@ -157,20 +157,18 @@ for i_episode in itertools.count():
             action = agent.select_action(state)  # Sample action from policy
         next_state, reward, done, _ = env.step(action)  # Step
 
-        mask = not done  # 1 for not done and 0 for done
-        memory.push(state, action, reward, next_state,
-                    mask)  # Append transition to memory
+        memory.push(state, action, reward, next_state, done)  # Append transition to memory
 
         if len(memory) > args.batch_size:
             for i in range(args.updates_per_step
                            ):  # Number of updates per step in environment
                 # Sample a batch from memory
-                state_batch, action_batch, reward_batch, next_state_batch, mask_batch = memory.sample(
+                state_batch, action_batch, reward_batch, next_state_batch, done_batch = memory.sample(
                     args.batch_size)
                 # Update parameters of all the networks
                 agent.update_parameters(state_batch, action_batch,
                                         reward_batch, next_state_batch,
-                                        mask_batch, updates)
+                                        done_batch, updates)
 
                 interval = args.reference_policy_update_interval
                 if agent.algo == 'pmac' and updates % interval == 0:

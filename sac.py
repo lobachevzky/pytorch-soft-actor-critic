@@ -121,13 +121,13 @@ class SAC(object):
         return action[0]
 
     def update_parameters(self, state_batch, action_batch, reward_batch,
-                          next_state_batch, mask_batch, updates):
+                          next_state_batch, done_batch, updates):
         state_batch = torch.FloatTensor(state_batch).to(self.device)
         next_state_batch = torch.FloatTensor(next_state_batch).to(self.device)
         action_batch = torch.FloatTensor(action_batch).to(self.device)
         reward_batch = torch.FloatTensor(reward_batch).unsqueeze(1).to(
             self.device)
-        mask_batch = torch.FloatTensor(np.float32(mask_batch)).unsqueeze(1).to(
+        done_batch = torch.FloatTensor(np.float32(done_batch)).unsqueeze(1).to(
             self.device)
         """
             Use two Q-functions to mitigate positive bias in the policy improvement step that is known
@@ -147,7 +147,7 @@ class SAC(object):
                 state_batch)
         value = self.value(state_batch)
         target_value = self.value_target(next_state_batch)
-        next_q_value = reward_batch + mask_batch * self.gamma * (
+        next_q_value = reward_batch + (1. - done_batch) * self.gamma * (
             target_value).detach()
         q1_value, q2_value = self.critic(state_batch, action_batch)
 
@@ -183,7 +183,7 @@ class SAC(object):
             target_critic_1, target_critic_2 = self.critic_target(
                 next_state_batch, next_state_action)
             target_critic = torch.min(target_critic_1, target_critic_2)
-            next_q_value = reward_batch + mask_batch * self.gamma * (
+            next_q_value = reward_batch + (1. - done_batch) * self.gamma * (
                 target_critic).detach()
         """
         Soft Q-function parameters can be trained to minimize the soft Bellman residual
