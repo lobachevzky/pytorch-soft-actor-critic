@@ -95,9 +95,9 @@ class SAC(object):
                 pass
 
             self.policy = GaussianPolicy(
-                hidden_size=self.obs_dim,
-                action_dim=self.action_dim,
-                obs_dim=obs_dim,
+                hidden_dim=self.obs_dim,
+                num_actions=self.action_dim,
+                num_inputs=obs_dim,
                 device=self.device)
             self.reference_policy = None
             if algo == 'pmac':

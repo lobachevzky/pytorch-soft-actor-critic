@@ -1,9 +1,9 @@
 from collections import namedtuple
 
 import torch
-from torch.distributions import Normal
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import Normal
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -69,51 +69,17 @@ class QNetwork(nn.Module):
 
 
 class GaussianPolicy(nn.Module):
-    """
-    Usage:
-
-    ```
-    policy = TanhGaussianPolicy(...)
-    action, mean, log_std, _ = policy(obs)
-    action, mean, log_std, _ = policy(obs, deterministic=True)
-    action, mean, log_std, log_prob = policy(obs, return_log_prob=True)
-    ```
-
-    Here, mean and log_std are the mean and log_std of the Gaussian that is
-    sampled from.
-
-    If deterministic is True, action = tanh(mean).
-    If return_log_prob is False (default), log_prob = None
-        This is done because computing the log_prob can be a bit expensive.
-    """
-
-    def __init__(
-            self,
-            hidden_size,
-            obs_dim,
-            action_dim,
-            device,
-    ):
+    def __init__(self, num_inputs, num_actions, hidden_dim, device):
         self.device = device
-        super().__init__()
+        super(GaussianPolicy, self).__init__()
 
-        self.linear1 = nn.Linear(obs_dim, hidden_size)
-        self.linear2 = nn.Linear(hidden_size, hidden_size)
+        self.linear1 = nn.Linear(num_inputs, hidden_dim)
+        self.linear2 = nn.Linear(hidden_dim, hidden_dim)
 
-        self.mean_linear = nn.Linear(hidden_size, action_dim)
-        self.log_std_linear = nn.Linear(hidden_size, action_dim)
+        self.mean_linear = nn.Linear(hidden_dim, num_actions)
+        self.log_std_linear = nn.Linear(hidden_dim, num_actions)
 
         self.apply(weights_init_)
-
-    def select_action(self, obs_np, eval=False):
-        actions = self.get_actions(obs_np[None], deterministic=eval)
-        return actions[0, :]
-
-    def get_actions(self, obs_np, deterministic=False):
-        out = self.forward(to_torch(obs_np, device=self.device),
-                           deterministic=deterministic)
-        return to_numpy(out.action)
-        # return self.eval_np(obs_np, deterministic=deterministic)[0]
 
     def forward(self, state):
         x = F.relu(self.linear1(state))
