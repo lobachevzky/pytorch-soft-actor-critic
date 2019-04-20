@@ -1,15 +1,15 @@
 import copy
 import csv
-from io import StringIO
 import os
 import subprocess
+from io import StringIO
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
 
-from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork, Critic
+from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork
 from util import hard_update, soft_update
 
 
@@ -76,9 +76,10 @@ class SAC(object):
         self.target_update_interval = target_update_interval
         self.automatic_entropy_tuning = automatic_entropy_tuning
 
-        self.critic = Critic(num_inputs=self.obs_dim,
-                             num_actions=self.action_dim,
-                             hidden_dim=hidden_size)
+        self.critic = QNetwork(
+            num_inputs=self.obs_dim,
+            num_actions=self.action_dim,
+            hidden_dim=hidden_size)
         self.critic_optim = Adam(self.critic.parameters(), lr=critic_lr)
 
         if self.policy_type == "Gaussian":
@@ -102,16 +103,15 @@ class SAC(object):
             if algo == 'pmac':
                 self.reference_policy = copy.deepcopy(self.policy)
                 self.reference_policy.to(self.device)
-            self.policy_optim = Adam(
-                self.policy.parameters(), lr=actor_lr)
+            self.policy_optim = Adam(self.policy.parameters(), lr=actor_lr)
 
             self.value = ValueNetwork(self.obs_dim, hidden_size)
             self.value_target = ValueNetwork(self.obs_dim, hidden_size)
             self.value_optim = Adam(self.value.parameters(), lr=critic_lr)
             hard_update(self.value_target, self.value)
         else:
-            self.policy = DeterministicPolicy(
-                self.obs_dim, self.action_dim, hidden_size)
+            self.policy = DeterministicPolicy(self.obs_dim, self.action_dim,
+                                              hidden_size)
             self.policy_optim = Adam(self.policy.parameters(), lr=critic_lr)
 
             self.critic_target = QNetwork(self.obs_dim, self.action_dim,
@@ -254,12 +254,12 @@ class SAC(object):
                 (self.tau1 + self.tau2))
             target_policy = torch.clamp(target_policy, max=0.9).detach()
             policy_loss = (target_policy * (target_policy - log_prob)).mean()
-            mean_reg_loss = self.policy_mean_reg_weight * (policy_mean **
+            mean_reg_loss = self.policy_mean_reg_weight * (policy_mean**
                                                            2).mean()
-            std_reg_loss = self.policy_std_reg_weight * (log_std ** 2).mean()
+            std_reg_loss = self.policy_std_reg_weight * (log_std**2).mean()
             # pre_tanh_value = policy_outputs[-1]
             pre_activation_reg_loss = self.policy_pre_activation_weight * (
-                (pre_tanh_value ** 2).sum(dim=1).mean())
+                (pre_tanh_value**2).sum(dim=1).mean())
             policy_reg_loss = mean_reg_loss + std_reg_loss + pre_activation_reg_loss
             policy_loss = policy_loss + policy_reg_loss
         else:
