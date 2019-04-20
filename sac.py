@@ -9,7 +9,7 @@ import torch
 import torch.nn.functional as F
 from torch.optim import Adam
 
-from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork
+from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork, Critic
 from util import hard_update, soft_update
 
 
@@ -76,8 +76,9 @@ class SAC(object):
         self.target_update_interval = target_update_interval
         self.automatic_entropy_tuning = automatic_entropy_tuning
 
-        self.critic = QNetwork(self.obs_dim, self.action_dim,
-                               hidden_size)
+        self.critic = Critic(num_inputs=self.obs_dim,
+                             num_actions=self.action_dim,
+                             hidden_dim=hidden_size)
         self.critic_optim = Adam(self.critic.parameters(), lr=critic_lr)
 
         if self.policy_type == "Gaussian":
@@ -92,8 +93,11 @@ class SAC(object):
             else:
                 pass
 
-            self.policy = GaussianPolicy(self.obs_dim, self.action_dim,
-                                         hidden_size)
+            self.policy = GaussianPolicy(
+                hidden_size=self.obs_dim,
+                action_dim=self.action_dim,
+                obs_dim=obs_dim,
+                device=self.device)
             self.reference_policy = None
             if algo == 'pmac':
                 self.reference_policy = copy.deepcopy(self.policy)

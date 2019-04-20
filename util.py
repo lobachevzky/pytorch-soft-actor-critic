@@ -2,6 +2,7 @@ import argparse
 import math
 from typing import List
 
+import numpy as np
 import gym
 import torch
 
@@ -85,3 +86,12 @@ def space_to_size(space: gym.Space):
         return sum(space_to_size(s) for s in _spaces)
     else:
         return space.shape[0]
+
+def to_numpy(x):
+    return x.detach().cpu().numpy()
+
+def to_torch(x, device=None):
+    if x.dtype == np.bool:
+        x = x.astype(int)
+    device = device or torch.device('cpu')
+    return torch.tensor(x, dtype=torch.float).to(device)
