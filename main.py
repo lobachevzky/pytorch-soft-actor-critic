@@ -9,6 +9,7 @@ import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 
+from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
 from util import hard_update, space_to_size
@@ -110,8 +111,7 @@ args = parser.parse_args()
 print('Using algorithm:', args.algo)
 
 # Environment
-# env = NormalizedActions(gym.make(args.env_name))
-env = gym.make(args.env_name)
+env = NormalizedActions(gym.make(args.env_name))
 env.action_space.np_random.seed(args.seed)
 env.unwrapped.np_random.seed(args.seed)
 torch.manual_seed(args.seed)
