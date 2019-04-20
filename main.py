@@ -94,7 +94,7 @@ def main(env_name, seed, logdir, replay_size, start_steps, batch_size, updates_p
               format(i_episode, total_numsteps, np.round(rewards[-1], 2),
                      np.round(np.mean(rewards[-100:]), 2)))
 
-        if i_episode % episodes_per_eval == 0 and eval == True:
+        if i_episode % episodes_per_eval == 0:
             state = env.reset()
             episode_reward = 0
             while True:
