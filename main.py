@@ -9,6 +9,7 @@ import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 
+from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
 from util import hard_update, hierarchical_parse_args
