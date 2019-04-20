@@ -5,16 +5,15 @@ import itertools
 import random
 
 import gym
-import ipdb
 import numpy as np
-from tensorboardX import SummaryWriter
 import torch
+from tensorboardX import SummaryWriter
+from utils import space_to_size
 
 from normalized_actions import NormalizedActions
 from replay_memory import ReplayMemory
 from sac import SAC
 from util import hard_update
-from utils import space_to_size
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -108,8 +107,7 @@ parser.add_argument('--tau_', type=float)
 args = parser.parse_args()
 
 # Environment
-# env = NormalizedActions(gym.make(args.env_name))
-env = gym.make(args.env_name)
+env = NormalizedActions(gym.make(args.env_name))
 env.action_space.np_random.seed(args.seed)
 env.unwrapped.np_random.seed(args.seed)
 torch.manual_seed(args.seed)
