@@ -120,9 +120,9 @@ class SAC(object):
         self.value.to(self.device)
         self.value_target.to(self.device)
 
-    def select_action(self, state, eval=False):
+    def select_action(self, state, deterministic=False):
         state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-        if not eval:
+        if not deterministic:
             self.policy.train()
             action = self.policy.sample(state).action
         else:

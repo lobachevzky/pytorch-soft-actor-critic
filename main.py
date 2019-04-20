@@ -98,7 +98,7 @@ def main(env_name, seed, logdir, replay_size, start_steps, batch_size, updates_p
             state = env.reset()
             episode_reward = 0
             while True:
-                action = agent.select_action(state, eval=True)
+                action = agent.select_action(state, deterministic=True)
 
                 next_state, reward, done, _ = env.step(action)
                 episode_reward += reward
@@ -184,7 +184,7 @@ parser.add_argument(
 parser.add_argument(
     '--episodes-per-eval', type=int, default=10, metavar='N', help=' ')
 parser.add_argument(
-    '--updates-per-write', type=int, default=100, metavar='N', help=' ')
+    '--updates-per-write', type=int, default=10000, metavar='N', help=' ')
 parser.add_argument(
     '--start-steps',
     type=int,
