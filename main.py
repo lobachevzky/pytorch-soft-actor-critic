@@ -72,7 +72,7 @@ def main(env_name, seed, logdir, replay_size, start_steps, batch_size, updates_p
                                             done_batch, updates)
 
                     interval = reference_policy_update_interval
-                    if agent.algo == 'pmac' and updates % interval == 0:
+                    if updates % interval == 0:
                         hard_update(agent.reference_policy, agent.policy)
 
                     updates += 1
