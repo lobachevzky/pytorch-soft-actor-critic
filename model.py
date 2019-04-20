@@ -93,13 +93,15 @@ class GaussianPolicy(nn.Module):
         std = log_std.exp()
         normal = Normal(mean, std)
 
-        x_t = normal.rsample()
-
-        act = torch.tanh(x_t)
-        log_prob = normal.log_prob(x_t) - torch.log(1 - act**2 + 1e-6)
+        x_t = normal.rsample(
+        )  # for reparameterization trick (mean + std * N(0,1))
+        action = torch.tanh(x_t)
+        log_prob = normal.log_prob(x_t)
+        # Enforcing Action Bound
+        log_prob -= torch.log(1 - action.pow(2) + epsilon)
         log_prob = log_prob.sum(dim=1, keepdim=True)
 
-        return ActValues(act, mean, log_std, log_prob, std, x_t, normal)
+        return ActValues(action, mean, log_std, log_prob, std, x_t, normal)
 
 
 class DeterministicPolicy(nn.Module):
