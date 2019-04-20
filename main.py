@@ -34,7 +34,7 @@ def main(env_name, seed, logdir, replay_size, start_steps, batch_size, updates_p
     # Agent
     agent = SAC(
         space_to_size(env.observation_space),
-        env.action_space,
+        space_to_size(env.action_space),
         **kwargs,
         writer=writer)
 

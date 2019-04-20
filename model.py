@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 import torch
 from torch.distributions import Normal
 import torch.nn as nn
@@ -6,6 +8,9 @@ import torch.nn.functional as F
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
 epsilon = 1e-6
+
+ActValues = namedtuple('ActValues',
+                       'action mean log_std log_prob std act_tanh dist')
 
 
 # Initialize Policy weights
@@ -94,7 +99,8 @@ class GaussianPolicy(nn.Module):
         # Enforcing Action Bound
         # log_prob -= torch.log(1 - action.pow(2) + epsilon)
         log_prob = log_prob.sum(1, keepdim=True)
-        return action, log_prob, x_t, mean, log_std, normal
+        return ActValues(action=action, log_prob=log_prob, act_tanh=x_t,
+                         mean=mean, std=std, log_std=log_std, dist=normal)
 
 
 class DeterministicPolicy(nn.Module):
@@ -119,5 +125,6 @@ class DeterministicPolicy(nn.Module):
         noise = self.noise.normal_(0., std=0.1)
         noise = noise.clamp(-0.25, 0.25)
         action = mean + noise
+        raise NotImplementedError
         return action, torch.tensor(0.), torch.tensor(0.), mean, torch.tensor(
             0.)

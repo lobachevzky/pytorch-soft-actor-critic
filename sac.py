@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 
 from model import DeterministicPolicy, GaussianPolicy, QNetwork, ValueNetwork
-from util import hard_update, soft_update,space_to_size
+from util import hard_update, soft_update
 
 
 def get_freer_gpu():
@@ -27,8 +27,8 @@ def get_freer_gpu():
 class SAC(object):
     def __init__(
             self,
-            num_inputs,
-            action_space,
+            obs_dim,
+            action_dim,
             updates_per_write,
             algo,
             tau1,
@@ -62,8 +62,8 @@ class SAC(object):
             assert tau2 is not None
         self.tau1 = tau1
         self.tau2 = tau2 or alpha
-        self.num_inputs = num_inputs
-        self.action_space = space_to_size(action_space)
+        self.obs_dim = obs_dim
+        self.action_dim = action_dim
         self.gamma = gamma
         self.smoothing = smoothing
         self.clip = clip
@@ -76,7 +76,7 @@ class SAC(object):
         self.target_update_interval = target_update_interval
         self.automatic_entropy_tuning = automatic_entropy_tuning
 
-        self.critic = QNetwork(self.num_inputs, self.action_space,
+        self.critic = QNetwork(self.obs_dim, self.action_dim,
                                hidden_size)
         self.critic_optim = Adam(self.critic.parameters(), lr=critic_lr)
 
@@ -84,14 +84,15 @@ class SAC(object):
             self.alpha = alpha
             # Target Entropy = −dim(A) (e.g. , -6 for HalfCheetah-v2) as given in the paper
             if self.automatic_entropy_tuning:
-                self.target_entropy = -torch.prod(
-                    torch.Tensor(action_space.shape)).item()
-                self.log_alpha = torch.zeros(1, requires_grad=True)
-                self.alpha_optim = Adam([self.log_alpha], lr=alpha_lr)
+                raise NotImplementedError
+                # self.target_entropy = -torch.prod(
+                #     torch.Tensor(action_space.shape)).item()
+                # self.log_alpha = torch.zeros(1, requires_grad=True)
+                # self.alpha_optim = Adam([self.log_alpha], lr=alpha_lr)
             else:
                 pass
 
-            self.policy = GaussianPolicy(self.num_inputs, self.action_space,
+            self.policy = GaussianPolicy(self.obs_dim, self.action_dim,
                                          hidden_size)
             self.reference_policy = None
             if algo == 'pmac':
@@ -100,16 +101,16 @@ class SAC(object):
             self.policy_optim = Adam(
                 self.policy.parameters(), lr=actor_lr)
 
-            self.value = ValueNetwork(self.num_inputs, hidden_size)
-            self.value_target = ValueNetwork(self.num_inputs, hidden_size)
+            self.value = ValueNetwork(self.obs_dim, hidden_size)
+            self.value_target = ValueNetwork(self.obs_dim, hidden_size)
             self.value_optim = Adam(self.value.parameters(), lr=critic_lr)
             hard_update(self.value_target, self.value)
         else:
             self.policy = DeterministicPolicy(
-                self.num_inputs, self.action_space, hidden_size)
+                self.obs_dim, self.action_dim, hidden_size)
             self.policy_optim = Adam(self.policy.parameters(), lr=critic_lr)
 
-            self.critic_target = QNetwork(self.num_inputs, self.action_space,
+            self.critic_target = QNetwork(self.obs_dim, self.action_dim,
                                           hidden_size)
             hard_update(self.critic_target, self.critic)
             self.critic_target.to(self.device)
@@ -123,10 +124,10 @@ class SAC(object):
         state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         if not eval:
             self.policy.train()
-            action, _, _, _, _, _ = self.policy.sample(state)
+            action = self.policy.sample(state).action
         else:
             self.policy.eval()
-            _, _, _, action, _, _ = self.policy.sample(state)
+            action = self.policy.sample(state).mean
             if self.policy_type == "Gaussian":
                 action = torch.tanh(action)
             else:
@@ -150,15 +151,18 @@ class SAC(object):
         up training, especially on harder task.
         """
         if self.algo == 'pmac':
-            *ref_values, _ = self.reference_policy.sample(state_batch)
-            new_action, ref_log_prob, ref_act_tanh, _, _ = [
-                x.detach() for x in ref_values
-            ]
-            _, _, pre_tanh_value, policy_mean, log_std, policy_dist = self.policy.sample(
-                state_batch)
+            ref_values = self.reference_policy.sample(state_batch)
+            new_action = ref_values.action.detach()
+            ref_log_prob = ref_values.log_prob.detach()
+            ref_act_tanh = ref_values.act_tanh.detach()
+            policy_values = self.policy.sample(state_batch)
+            pre_tanh_value = policy_values.act_tanh
+            policy_mean = policy_values.mean
+            log_std = policy_values.log_std
+            policy_dist = policy_values.dist
             log_prob = policy_dist.log_prob(ref_act_tanh)
         else:
-            new_action, log_prob, pre_tanh_value, policy_mean, log_std, policy_dist = self.policy.sample(
+            new_action, policy_mean, log_std, log_prob, _, pre_tanh_value, policy_dist = self.policy.sample(
                 state_batch)
         value = self.value(state_batch)
         target_value = self.value_target(next_state_batch)
@@ -166,27 +170,28 @@ class SAC(object):
             target_value).detach()
         q1_value, q2_value = self.critic(state_batch, action_batch)
 
-        if False:  # self.policy_type == "Gaussian":
+        if self.policy_type == "Gaussian":
             if self.automatic_entropy_tuning:
                 """
                 Alpha Loss
                 """
-                alpha_loss = -(self.log_alpha * (
-                    log_prob + self.target_entropy).detach()).mean()
-                self.alpha_optim.zero_grad()
-                alpha_loss.backward()
-                if self.clip:
-                    torch.nn.utils.clip_grad_norm([self.log_alpha], self.clip)
-                self.alpha_optim.step()
-                self.alpha = self.log_alpha.exp()
-                alpha_logs = self.alpha.clone()  # For TensorboardX logs
-            else:
-                alpha_loss = torch.tensor(0.)
-                alpha_logs = self.alpha  # For TensorboardX logs
+                raise NotImplementedError
+                # alpha_loss = -(self.log_alpha * (
+                #     log_prob + self.target_entropy).detach()).mean()
+                # self.alpha_optim.zero_grad()
+                # alpha_loss.backward()
+                # if self.clip:
+                #     torch.nn.utils.clip_grad_norm([self.log_alpha], self.clip)
+                # self.alpha_optim.step()
+                # self.alpha = self.log_alpha.exp()
+                # alpha_logs = self.alpha.clone()  # For TensorboardX logs
+            # else:
+            #     alpha_loss = torch.tensor(0.)
+            #     alpha_logs = self.alpha  # For TensorboardX logs
             """
             Including a separate function approximator for the soft value can stabilize training.
             """
-        elif False:
+        else:
             """
             There is no need in principle to include a separate function approximator for the state value.
             We use a target critic network for deterministic policy and eradicate the value value network completely.
@@ -245,12 +250,12 @@ class SAC(object):
                 (self.tau1 + self.tau2))
             target_policy = torch.clamp(target_policy, max=0.9).detach()
             policy_loss = (target_policy * (target_policy - log_prob)).mean()
-            mean_reg_loss = self.policy_mean_reg_weight * (policy_mean**
+            mean_reg_loss = self.policy_mean_reg_weight * (policy_mean **
                                                            2).mean()
-            std_reg_loss = self.policy_std_reg_weight * (log_std**2).mean()
+            std_reg_loss = self.policy_std_reg_weight * (log_std ** 2).mean()
             # pre_tanh_value = policy_outputs[-1]
             pre_activation_reg_loss = self.policy_pre_activation_weight * (
-                (pre_tanh_value**2).sum(dim=1).mean())
+                (pre_tanh_value ** 2).sum(dim=1).mean())
             policy_reg_loss = mean_reg_loss + std_reg_loss + pre_activation_reg_loss
             policy_loss = policy_loss + policy_reg_loss
         else:
