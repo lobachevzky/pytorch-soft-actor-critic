@@ -16,8 +16,9 @@ from util import hard_update, hierarchical_parse_args
 from utils import space_to_size
 
 
-def main(env_name, seed, logdir, replay_size, start_steps, batch_size, updates_per_step,
-         reference_policy_update_interval, num_steps, episodes_per_eval, **kwargs):
+def main(env_name, seed, logdir, replay_size, start_steps, batch_size,
+         updates_per_step, reference_policy_update_interval, num_steps,
+         episodes_per_eval, **kwargs):
     # Environment
     env = NormalizedActions(gym.make(env_name))
     env.action_space.np_random.seed(seed)
@@ -55,10 +56,12 @@ def main(env_name, seed, logdir, replay_size, start_steps, batch_size, updates_p
             if start_steps > total_numsteps:
                 action = env.action_space.sample()
             else:
-                action = agent.select_action(state)  # Sample action from policy
+                action = agent.select_action(
+                    state)  # Sample action from policy
             next_state, reward, done, _ = env.step(action)  # Step
 
-            memory.push(state, action, reward, next_state, done)  # Append transition to memory
+            memory.push(state, action, reward, next_state,
+                        done)  # Append transition to memory
 
             if len(memory) > batch_size:
                 for i in range(updates_per_step
@@ -88,11 +91,12 @@ def main(env_name, seed, logdir, replay_size, start_steps, batch_size, updates_p
             break
 
         if writer:
-            writer.add_scalar('train reward', episode_reward, i_episode)
+            writer.add_scalar('train reward', episode_reward, total_numsteps)
         rewards.append(episode_reward)
-        print("Episode: {}, total numsteps: {}, reward: {}, average reward: {}".
-              format(i_episode, total_numsteps, np.round(rewards[-1], 2),
-                     np.round(np.mean(rewards[-100:]), 2)))
+        print(
+            "Episode: {}, total numsteps: {}, reward: {}, average reward: {}".
+            format(i_episode, total_numsteps, np.round(rewards[-1], 2),
+                   np.round(np.mean(rewards[-100:]), 2)))
 
         if i_episode % episodes_per_eval == 0:
             state = env.reset()
@@ -108,12 +112,12 @@ def main(env_name, seed, logdir, replay_size, start_steps, batch_size, updates_p
                     break
 
             if writer:
-                writer.add_scalar('test reward', episode_reward, i_episode)
+                writer.add_scalar('test reward', episode_reward, total_numsteps)
 
             test_rewards.append(episode_reward)
             print("----------------------------------------")
-            print("Test Episode: {}, reward: {}".format(i_episode,
-                                                        test_rewards[-1]))
+            print("Test Episode: {}, reward: {}".format(
+                i_episode, test_rewards[-1]))
             print("----------------------------------------")
 
     env.close()

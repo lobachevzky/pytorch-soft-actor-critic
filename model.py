@@ -1,9 +1,9 @@
 from collections import namedtuple
 
 import torch
-from torch.distributions import Normal
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import Normal
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -99,8 +99,14 @@ class GaussianPolicy(nn.Module):
         # Enforcing Action Bound
         log_prob -= torch.log(1 - action.pow(2) + epsilon)
         log_prob = log_prob.sum(1, keepdim=True)
-        return ActValues(action=action, log_prob=log_prob, act_tanh=x_t,
-                         mean=mean, std=std, log_std=log_std, dist=normal)
+        return ActValues(
+            action=action,
+            log_prob=log_prob,
+            act_tanh=x_t,
+            mean=mean,
+            std=std,
+            log_std=log_std,
+            dist=normal)
 
 
 class DeterministicPolicy(nn.Module):
