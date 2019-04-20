@@ -1,9 +1,9 @@
 from collections import namedtuple
 
 import torch
-from torch.distributions import Normal
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import Normal
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -88,31 +88,16 @@ class GaussianPolicy(nn.Module):
         log_std = torch.clamp(log_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
         return mean, log_std
 
-    def sample(
-            self,
-            obs,
-            act_tanh=None,
-            deterministic=False,
-    ):
-        """
-        :param obs: Observation
-        :param deterministic: If True, do not sample
-        :param return_log_prob: If True, return a sample and its log probability
-        """
-        mean, log_std = self.forward(obs)
-        std = torch.exp(log_std)
+    def sample(self, state):
+        mean, log_std = self.forward(state)
+        std = log_std.exp()
+        normal = Normal(mean, std)
 
-        if deterministic:
-            act = torch.tanh(mean)
-            log_prob = None
-        else:
-            normal = Normal(mean, std)
-            if act_tanh is None:
-                act_tanh = normal.sample()
+        act_tanh = normal.sample()
 
-            act = torch.tanh(act_tanh)
-            log_prob = normal.log_prob(act_tanh) - torch.log(1 - act**2 + 1e-6)
-            log_prob = log_prob.sum(dim=1, keepdim=True)
+        act = torch.tanh(act_tanh)
+        log_prob = normal.log_prob(act_tanh) - torch.log(1 - act**2 + 1e-6)
+        log_prob = log_prob.sum(dim=1, keepdim=True)
 
         return ActValues(act, mean, log_std, log_prob, std, act_tanh, normal)
 
