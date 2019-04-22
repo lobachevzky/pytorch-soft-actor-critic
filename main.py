@@ -147,8 +147,7 @@ parser.add_argument(
     metavar='G',
     help='target smoothing coefficient(τ)')
 parser.add_argument('--clip', type=float, help='gradient clipping')
-parser.add_argument(
-    '--lr', type=float, required=True, help='learning rate')
+parser.add_argument('--lr', type=float, required=True, help='learning rate')
 parser.add_argument(
     '--alpha-lr', type=float, default=0.0003, help='alpha learning rate')
 parser.add_argument(
@@ -166,7 +165,7 @@ parser.add_argument(
     metavar='G',
     help='Temperature parameter α automaically adjusted.')
 parser.add_argument(
-    '--seed', type=int, default=0, metavar='N', help='random seed')
+    '--seed', type=int, default=1, metavar='N', help='random seed')
 parser.add_argument(
     '--batch-size', type=int, default=256, metavar='N', help='batch size')
 parser.add_argument('--no-cuda', dest='cuda', action='store_false')
